@@ -138,10 +138,10 @@ MALI_USE_YUV_AFBC_WIDEBLK?=0
 GRALLOC_INIT_AFBC?=1
 
 # for bifrost GPU, use afbc layer by default.
-USE_AFBC_LAYER = 1
+USE_AFBC_LAYER = 0
 
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),rk3399)
-USE_AFBC_LAYER = 1
+USE_AFBC_LAYER = 0
 ifeq ($(strip $(TARGET_BOARD_PLATFORM_PRODUCT)),box)
 USE_AFBC_LAYER = 0
 endif
