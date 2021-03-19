@@ -16,13 +16,13 @@
  */
 
 cc_library_static {
-    name: "libgralloc_drmutils",
+    name: "libgralloc_drm_utils",
     cflags: [
         "-Wall",
         "-Werror",
     ],
     srcs: [
-        "src/drmutils.cpp",
+        "src/drm_utils.cpp",
     ],
     vendor: true,
     shared_libs: [
