@@ -27,11 +27,11 @@ cc_defaults {
 	],
 
 	srcs: [
-		"mali_gralloc_bufferaccess.cpp",
-		"mali_gralloc_bufferallocation.cpp",
-		"mali_gralloc_formats.cpp",
-		"mali_gralloc_reference.cpp",
-		"mali_gralloc_debug.cpp",
+		"buffer_access.cpp",
+		"buffer_allocation.cpp",
+		"formats.cpp",
+		"reference.cpp",
+		"debug.cpp",
 		"format_info.cpp",
 	],
 	static_libs: [

@@ -22,13 +22,13 @@
 
 #include <hardware/gralloc1.h>
 
-#include "mali_gralloc_bufferallocation.h"
-#include "allocator/mali_gralloc_ion.h"
-#include "mali_gralloc_private_interface_types.h"
-#include "mali_gralloc_buffer.h"
-#include "gralloc_buffer_priv.h"
-#include "mali_gralloc_bufferdescriptor.h"
-#include "mali_gralloc_debug.h"
+#include "buffer_allocation.h"
+#include "allocator/ion_support.h"
+#include "private_interface_types.h"
+#include "buffer.h"
+#include "gralloc/attributes.h"
+#include "buffer_descriptor.h"
+#include "debug.h"
 #include "legacy/buffer_alloc.h"
 
 namespace legacy

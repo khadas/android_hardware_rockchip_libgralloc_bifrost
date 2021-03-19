@@ -138,10 +138,10 @@ fi
 command pushd $(pwd) > /dev/null
 
 # Clean all build files
-find . \( -name "Android.bp" ! -wholename "*src/Android.bp" \) -delete
-if [ -f Android.mk ]; then
-    mv Android.mk Android.mk.disabled
-fi
+find . \( -name "Android.bp" ! -wholename "./src/Android.bp" \) -delete
+for path in `find . -name "*.mk" ! -wholename "./gralloc.device.mk"`; do
+     mv $path $path.disabled
+done
 
 if [ $PRIVATE_BUFFER = 1 ]; then
     cp interfaces/Android.bp.disabled interfaces/Android.bp
@@ -160,7 +160,9 @@ else
 fi
 
 if [ $GRALLOC_VERSION = 2 ] || [ $GRALLOC_VERSION = 3 ]; then
-    cp Android.mk.disabled Android.mk
+    for path in `find . -name "*.mk.disabled"`; do
+        mv $path ${path%.disabled}
+    done
 fi
 
 # Stable AIDL and DRM utils interfaces

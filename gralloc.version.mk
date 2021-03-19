@@ -61,12 +61,6 @@ else ifeq ($(GRALLOC_API_VERSION), 3.x)
     HIDL_ALLOCATOR_VERSION_SCALED := 300
     HIDL_MAPPER_VERSION_SCALED := 300
     HIDL_COMMON_VERSION_SCALED := 120
-else ifeq ($(GRALLOC_API_VERSION), 4.x)
-    $(info Building Gralloc 4.x on platform SDK version $(PLATFORM_SDK_VERSION))
-    #Allocator = 4.0, Mapper = 4.0 and Common = 1.2
-    HIDL_ALLOCATOR_VERSION_SCALED := 400
-    HIDL_MAPPER_VERSION_SCALED := 400
-    HIDL_COMMON_VERSION_SCALED := 120
 endif
 
 GRALLOC_VERSION_MAJOR := $(shell echo $(GRALLOC_API_VERSION) | cut -d. -f1)

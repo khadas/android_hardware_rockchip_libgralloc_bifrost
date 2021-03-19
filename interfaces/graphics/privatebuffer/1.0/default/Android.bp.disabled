@@ -26,8 +26,8 @@ cc_library_shared {
         },
     },
     srcs: [
-        "Accessor.cpp",
-        "AttributeAccessor.cpp",
+        "accessor.cpp",
+        "attribute_accessor.cpp",
     ],
     shared_libs: [
         "libhidlbase",
@@ -40,7 +40,7 @@ cc_library_shared {
         "libhardware",
     ],
     static_libs: [
-        "libgralloc_drmutils",
+        "libgralloc_drm_utils",
     ],
     cflags: ["-DLOG_TAG=\"PrivateBufferHal\""],
 }

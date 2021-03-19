@@ -26,7 +26,7 @@ LOCAL_MULTILIB := both
 
 LOCAL_C_INCLUDES := $(GRALLOC_SRC_PATH)
 
-LOCAL_SRC_FILES := mali_gralloc_ion.cpp mali_gralloc_shared_memory.cpp
+LOCAL_SRC_FILES := ion_support.cpp shared_memory.cpp
 
 LOCAL_SHARED_LIBRARIES := libhardware liblog libcutils libion libsync libutils
 

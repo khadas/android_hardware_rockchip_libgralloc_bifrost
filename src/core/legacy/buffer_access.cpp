@@ -20,12 +20,12 @@
 
 #include <hardware/gralloc1.h>
 
-#include "mali_gralloc_private_interface_types.h"
-#include "mali_gralloc_buffer.h"
-#include "mali_gralloc_formats.h"
-#include "mali_gralloc_usages.h"
-#include "allocator/mali_gralloc_ion.h"
-#include "gralloc_helper.h"
+#include "private_interface_types.h"
+#include "buffer.h"
+#include "gralloc/formats.h"
+#include "usages.h"
+#include "allocator/ion_support.h"
+#include "helper_functions.h"
 
 namespace legacy
 {

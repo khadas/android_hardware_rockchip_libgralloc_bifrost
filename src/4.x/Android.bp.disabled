@@ -77,7 +77,7 @@ cc_library_shared {
 		"android.hardware.graphics.mapper@4.0",
 	],
 	srcs: [
-		"GrallocAllocator.cpp",
+		"allocator.cpp",
 		":libgralloc_hidl_common_allocator",
 		":libgralloc_hidl_common_shared_metadata",
 	],
@@ -89,14 +89,14 @@ cc_library_shared {
 		"arm_gralloc_api_4x_defaults",
 	],
 	static_libs: [
-		"libgralloc_drmutils",
+		"libgralloc_drm_utils",
 	],
 	shared_libs: [
 		"arm.graphics-ndk_platform",
 		"android.hardware.graphics.mapper@4.0",
 	],
 	srcs: [
-		"GrallocMapper.cpp",
+		"mapper.cpp",
 		":libgralloc_hidl_common_mapper",
 		":libgralloc_hidl_common_mapper_metadata",
 		":libgralloc_hidl_common_shared_metadata",

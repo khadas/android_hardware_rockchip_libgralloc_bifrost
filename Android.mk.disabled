@@ -48,9 +48,6 @@ endif
 ifeq ($(GRALLOC_VERSION_MAJOR), 3)
    $(info Build 3.0 IAllocator service.)
    include $(TOP_LOCAL_PATH)/service/3.x/Android.mk
-else ifeq ($(GRALLOC_VERSION_MAJOR), 4)
-   $(info Build 4.0 IAllocator service.)
-   include $(TOP_LOCAL_PATH)/service/4.x/Android.mk
 endif
 
 # Build gralloc api tests.

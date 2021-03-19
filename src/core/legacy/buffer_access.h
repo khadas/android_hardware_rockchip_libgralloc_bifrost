@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-#ifndef BUFFER_ACCESS_H_
-#define BUFFER_ACCESS_H_
+#pragma once
 
 namespace legacy
 {
@@ -33,6 +32,3 @@ int mali_gralloc_lock_flex(buffer_handle_t buffer, uint64_t usage, int l, int t,
                            struct android_flex_layout *flex_layout);
 
 }
-
-
-#endif

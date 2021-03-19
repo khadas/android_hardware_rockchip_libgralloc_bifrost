@@ -27,11 +27,11 @@ MULTIARCH_MODULE_TAGS := optional
 MULTIARCH_C_INCLUDES := $(GRALLOC_SRC_PATH)
 
 MULTIARCH_SRC_FILES := \
-    mali_gralloc_bufferaccess.cpp \
-    mali_gralloc_bufferallocation.cpp \
-    mali_gralloc_formats.cpp \
-    mali_gralloc_reference.cpp \
-    mali_gralloc_debug.cpp \
+    buffer_access.cpp \
+    buffer_allocation.cpp \
+    formats.cpp \
+    reference.cpp \
+    debug.cpp \
     format_info.cpp
 
 ifeq ($(GRALLOC_USE_LEGACY_CALCS_LOCK), 1)

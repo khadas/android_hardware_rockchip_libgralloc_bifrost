@@ -170,7 +170,7 @@ LOCAL_C_INCLUDES := $(MALI_LOCAL_PATH) $(MALI_DDK_INCLUDES)
 
 # General compilation flags
 GRALLOC_SHARED_CFLAGS := -ldl -Werror -DLOG_TAG="\"gralloc$(GRALLOC_VERSION_MAJOR)\"" \
-                         -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
+                         -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION) -I$(GRALLOC_SRC_PATH)/include
 
 #Shared flags
 GRALLOC_SHARED_CFLAGS += -DMALI_DISPLAY_VERSION=$(MALI_DISPLAY_VERSION)
@@ -214,13 +214,6 @@ else ifeq ($(GRALLOC_VERSION_MAJOR), 3)
     else
         LOCAL_SHARED_LIBRARIES += android.hardware.graphics.allocator@3.0
     endif
-else ifeq ($(GRALLOC_VERSION_MAJOR), 4)
-    LOCAL_SHARED_LIBRARIES += libhidlbase libgralloctypes libdrm
-    ifeq ($(GRALLOC_MAPPER), 1)
-        LOCAL_SHARED_LIBRARIES += android.hardware.graphics.mapper@4.0
-    else
-        LOCAL_SHARED_LIBRARIES += android.hardware.graphics.allocator@4.0
-    endif
 endif
 
 LOCAL_SHARED_LIBRARIES += libnativewindow
@@ -253,12 +246,6 @@ else ifeq ($(GRALLOC_VERSION_MAJOR), 3)
     else
         LOCAL_MODULE := android.hardware.graphics.allocator@3.0-impl-arm
     endif
-else ifeq ($(GRALLOC_VERSION_MAJOR), 4)
-    ifeq ($(GRALLOC_MAPPER), 1)
-        LOCAL_MODULE := android.hardware.graphics.mapper@4.0-impl-arm
-    else
-        LOCAL_MODULE := android.hardware.graphics.allocator@4.0-impl-arm
-    endif
 endif
 
 LOCAL_MODULE_OWNER := arm
@@ -272,20 +259,20 @@ LOCAL_GROUP_STATIC_LIBRARIES := true
 LOCAL_STATIC_LIBRARIES += libgralloc_core libgralloc_allocator libgralloc_capabilities
 
 ifeq ($(GRALLOC_VERSION_MAJOR), 1)
-    LOCAL_SRC_FILES += 1.x/mali_gralloc_module.cpp \
-                       fbdev/mali_gralloc_framebuffer.cpp \
+    LOCAL_SRC_FILES += 1.x/module.cpp \
+                       fbdev/framebuffer.cpp \
                        1.x/framebuffer_device.cpp \
-                       1.x/gralloc_vsync_${GRALLOC_VSYNC_BACKEND}.cpp \
-                       1.x/mali_gralloc_public_interface.cpp
+                       1.x/vsync_${GRALLOC_VSYNC_BACKEND}.cpp \
+                       1.x/public_interface.cpp
 else ifeq ($(GRALLOC_VERSION_MAJOR), 2)
     ifeq ($(GRALLOC_MAPPER), 1)
-        LOCAL_SRC_FILES += 2.x/GrallocMapper.cpp \
-                           hidl_common/Mapper.cpp \
-                           hidl_common/RegisteredHandlePool.cpp
+        LOCAL_SRC_FILES += 2.x/mapper.cpp \
+                           hidl_common/mapper.cpp \
+                           hidl_common/registered_handle_pool.cpp
     else
-        LOCAL_SRC_FILES += 2.x/GrallocAllocator.cpp \
-                           fbdev/mali_gralloc_framebuffer.cpp \
-                           hidl_common/Allocator.cpp
+        LOCAL_SRC_FILES += 2.x/allocator.cpp \
+                           fbdev/framebuffer.cpp \
+                           hidl_common/allocator.cpp
     endif
 
     LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := \
@@ -312,31 +299,14 @@ else ifeq ($(GRALLOC_VERSION_MAJOR), 3)
         libhidltransport
 
     ifeq ($(GRALLOC_MAPPER), 1)
-        LOCAL_SRC_FILES += 3.x/GrallocMapper.cpp \
-                           hidl_common/Mapper.cpp \
-                           hidl_common/RegisteredHandlePool.cpp
+        LOCAL_SRC_FILES += 3.x/mapper.cpp \
+                           hidl_common/mapper.cpp \
+                           hidl_common/registered_handle_pool.cpp
     else
-        LOCAL_SRC_FILES += 3.x/GrallocAllocator.cpp \
-                           hidl_common/Allocator.cpp
+        LOCAL_SRC_FILES += 3.x/allocator.cpp \
+                           hidl_common/allocator.cpp
         LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.allocator@3.0
         LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.mapper@3.0
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.common@1.2
-    endif
-else ifeq ($(GRALLOC_VERSION_MAJOR), 4)
-    LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := \
-        libhidlbase
-    ifeq ($(GRALLOC_MAPPER), 1)
-        LOCAL_SRC_FILES += 4.x/GrallocMapper.cpp \
-                           hidl_common/Mapper.cpp \
-                           hidl_common/RegisteredHandlePool.cpp \
-                           hidl_common/MapperMetadata.cpp
-        LOCAL_STATIC_LIBRARIES += libgralloc_drmutils
-        LOCAL_SHARED_LIBRARIES += arm.graphics-ndk_platform
-    else
-        LOCAL_SRC_FILES += 4.x/GrallocAllocator.cpp \
-                           hidl_common/Allocator.cpp
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.allocator@4.0
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.mapper@4.0
         LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.common@1.2
     endif
 endif

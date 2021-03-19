@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 #include <inttypes.h>
-#include "gralloc_helper.h"
-#include "mali_gralloc_formats.h"
+#include "helper_functions.h"
+#include "gralloc/formats.h"
 #include "format_info.h"
-#include "mali_gralloc_usages.h"
+#include "usages.h"
 
 /* Default width aligned to whole pixel (CPU access). */
 #define ALIGN_W_CPU_DEFAULT .align_w_cpu = 1
@@ -36,63 +36,70 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 6, .bpp_afbc = { 16, 0, 0 }, .bpp = { 16, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = true, .is_yuv = false,
-		.afbc = true, .linear = true, .yuv_transform = true, .flex = false,
+		.afbc = true, .linear = true, .yuv_transform = true, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_RGB_888,
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 8, .bpp_afbc = { 24, 0, 0 }, .bpp = { 24, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = true, .is_yuv = false,
-		.afbc = true, .linear = true, .yuv_transform = true, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = true, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_RGBA_8888,
 		.npln = 1, .ncmp = { 4, 0, 0 }, .bps = 8, .bpp_afbc = { 32, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = true, .is_rgb = true, .is_yuv = false,
-		.afbc = true, .linear = true, .yuv_transform = true, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = true, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_BGRA_8888,
 		.npln = 1, .ncmp = { 4, 0, 0 }, .bps = 8, .bpp_afbc = { 32, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = true, .is_rgb = true, .is_yuv = false,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_RGBX_8888,
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 8, .bpp_afbc = { 32, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = true, .is_yuv = false,
-		.afbc = true, .linear = true, .yuv_transform = true, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = true, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_RGBA_1010102,
 		.npln = 1, .ncmp = { 4, 0, 0 }, .bps = 10, .bpp_afbc = { 32, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = true, .is_rgb = true, .is_yuv = false,
-		.afbc = true, .linear = true, .yuv_transform = true, .flex = false,
+		.afbc = true, .linear = true, .yuv_transform = true, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_RGBA_16161616,
 		.npln = 1, .ncmp = { 4, 0, 0 }, .bps = 16, .bpp_afbc = { 64, 0, 0 }, .bpp = { 64, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = true, .is_rgb = true, .is_yuv = false,
-		.afbc = true, .linear = true, .yuv_transform = true, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = true, .flex = true, .block_linear = false,
+	},
+	{
+		.id = MALI_GRALLOC_FORMAT_INTERNAL_RGBA_10101010,
+		.npln = 1, .ncmp = { 4, 0, 0 }, .bps = 10, .bpp_afbc = { 40, 0, 0 }, .bpp = { 64, 0, 0 },
+		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
+		.tile_size = 1, .has_alpha = true, .is_rgb = true, .is_yuv = false,
+		.afbc = true, .linear = true, .yuv_transform = true, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_Y8,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 8, .bpp_afbc = { 8, 0, 0 }, .bpp = { 8, 0, 0 },
 		.hsub = 1, .vsub = 1, .align_w = 2, .align_h = 2, .align_w_cpu = 16,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_Y16,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 16, .bpp_afbc = { 16, 0, 0 }, .bpp = { 16, 0, 0 },
 		.hsub = 1, .vsub = 1, .align_w = 2, .align_h = 2, .align_w_cpu = 16,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	/* 420 (8-bit) */
 	{
@@ -100,28 +107,28 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 8, .bpp_afbc = { 12, 0, 0 }, .bpp = { 0, 0, 0 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = false, .yuv_transform = false, .flex = false,
+		.afbc = true, .linear = false, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV12,
 		.npln = 2, .ncmp = { 1, 2, 0 }, .bps = 8, .bpp_afbc = { 8, 16, 0 }, .bpp = { 8, 16, 0 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = true,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV21,
 		.npln = 2, .ncmp = { 1, 2, 0 }, .bps = 8, .bpp_afbc = { 8, 16, 0 }, .bpp = { 8, 16, 0 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_YV12,
 		.npln = 3, .ncmp = { 1, 1, 1 }, .bps = 8, .bpp_afbc = { 8, 8, 8 }, .bpp = { 8, 8, 8 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, .align_w_cpu = 16,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	/* 422 (8-bit) */
 	{
@@ -129,14 +136,14 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 8, .bpp_afbc = { 16, 0, 0 }, .bpp = { 16, 0, 0 },
 		.hsub = 2, .vsub = 1, .align_w = 2, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV16,
 		.npln = 2, .ncmp = { 1, 2, 0 }, .bps = 8, .bpp_afbc = { 8, 16, 0 }, .bpp = { 8, 16, 0 },
 		.hsub = 2, .vsub = 1, .align_w = 2, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = true,
 	},
 	/* 420 (10-bit) */
 	{
@@ -144,21 +151,28 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 10, .bpp_afbc = { 15, 0, 0 }, .bpp = { 0, 0, 0 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = false, .yuv_transform = false, .flex = false,
+		.afbc = true, .linear = false, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_Y0L2,
 		.npln = 1, .ncmp = { 4, 0, 0 }, .bps = 10, .bpp_afbc = { 0, 0, 0 }, .bpp = { 16, 0, 0 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 2, .has_alpha = true, .is_rgb = false, .is_yuv = true,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_P010,
 		.npln = 2, .ncmp = { 1, 2, 0 }, .bps = 10, .bpp_afbc = { 10, 20, 0 }, .bpp = { 16, 32, 0 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = true,
+	},
+	{
+		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV15,
+		.npln = 2, .ncmp = { 1, 2, 0 }, .bps = 10, .bpp_afbc = { 0, 0, 0 }, .bpp = { 10, 20, 0 },
+		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
+		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
+		.afbc = false, .linear = false, .yuv_transform = false, .flex = false, .block_linear = true,
 	},
 	/* 422 (10-bit) */
 	{
@@ -166,14 +180,14 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 10, .bpp_afbc = { 20, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 2, .vsub = 1, .align_w = 2, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_P210,
 		.npln = 2, .ncmp = { 1, 2, 0 }, .bps = 10, .bpp_afbc = { 10, 20, 0 }, .bpp = { 16, 32, 0 },
 		.hsub = 2, .vsub = 1, .align_w = 2, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = true, .yuv_transform = false, .flex = true,
+		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	/* 444 (10-bit) */
 	{
@@ -181,14 +195,14 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 3, 0, 0 }, .bps = 10, .bpp_afbc = { 30, 0, 0 }, .bpp = { 0, 0, 0 },
 		.hsub = 1, .vsub = 1, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = true, .linear = false, .yuv_transform = false, .flex = false,
+		.afbc = true, .linear = false, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_Y410,
 		.npln = 1, .ncmp = { 4, 0, 0 }, .bps = 10, .bpp_afbc = { 0, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 1, .vsub = 1, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = true, .is_rgb = false, .is_yuv = true,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	/* Other */
 	{
@@ -196,28 +210,28 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 16, .bpp_afbc = { 0, 0, 0 }, .bpp = { 16, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 2, .align_h = 2, .align_w_cpu = 16,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_RAW12,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 12, .bpp_afbc = { 0, 0, 0 }, .bpp = { 12, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 4, .align_h = 2, .align_w_cpu = 4,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_RAW10,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 10, .bpp_afbc = { 0, 0, 0 }, .bpp = { 10, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 4, .align_h = 2, .align_w_cpu = 4,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_BLOB,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 8, .bpp_afbc = { 0, 0, 0 }, .bpp = { 8, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	/* Depth and Stencil */
 	{
@@ -225,42 +239,42 @@ const format_info_t formats[] = {
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 16, .bpp_afbc = { 0, 0, 0}, .bpp = { 16, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_DEPTH_24,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 24, .bpp_afbc = { 0, 0, 0 }, .bpp = { 24, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_DEPTH_24_STENCIL_8,
 		.npln = 1, .ncmp = { 2, 0, 0 }, .bps = 24, .bpp_afbc = { 0, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_DEPTH_32F,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 32, .bpp_afbc = { 0, 0, 0 }, .bpp = { 32, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_DEPTH_32F_STENCIL_8,
 		.npln = 1, .ncmp = { 2, 0, 0 }, .bps = 32, .bpp_afbc = { 0, 0, 0 }, .bpp = { 40, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_STENCIL_8,
 		.npln = 1, .ncmp = { 1, 0, 0 }, .bps = 8, .bpp_afbc = { 0, 0, 0 }, .bpp = { 8, 0, 0 },
 		.hsub = 0, .vsub = 0, .align_w = 1, .align_h = 1, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = false,
-		.afbc = false, .linear = true, .yuv_transform = false, .flex = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = false,
 	},
 };
 const size_t num_formats = sizeof(formats)/sizeof(formats[0]);
@@ -362,6 +376,19 @@ const format_ip_support_t formats_ip_support[] = {
 		.cam_wr = F_NONE,
 	},
 	{
+		.id = MALI_GRALLOC_FORMAT_INTERNAL_RGBA_10101010,
+		.cpu_rd = F_LIN,
+		.cpu_wr = F_LIN,
+		.gpu_rd = F_LIN | F_AFBC,
+		.gpu_wr = F_LIN | F_AFBC,
+		.dpu_rd = F_NONE,
+		.dpu_wr = F_NONE,
+		.dpu_aeu_wr = F_NONE,
+		.vpu_rd = F_NONE,
+		.vpu_wr = F_NONE,
+		.cam_wr = F_NONE,
+	},
+	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_Y8,
 		.cpu_rd = F_LIN,
 		.cpu_wr = F_LIN,
@@ -505,6 +532,19 @@ const format_ip_support_t formats_ip_support[] = {
 		.dpu_aeu_wr = F_NONE,
 		.vpu_rd = F_LIN,
 		.vpu_wr = F_LIN,
+		.cam_wr = F_NONE,
+	},
+	{
+		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV15,
+		.cpu_rd = F_NONE,
+		.cpu_wr = F_NONE,
+		.gpu_rd = F_NONE,
+		.gpu_wr = F_NONE,
+		.dpu_rd = F_NONE,
+		.dpu_wr = F_NONE,
+		.dpu_aeu_wr = F_NONE,
+		.vpu_rd = F_NONE,
+		.vpu_wr = F_NONE,
 		.cam_wr = F_NONE,
 	},
 	/* 422 (10-bit) */

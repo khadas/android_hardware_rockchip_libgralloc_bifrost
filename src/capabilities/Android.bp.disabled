@@ -27,7 +27,6 @@ soong_config_module_type {
 		"mali_gpu_support_afbc_yuv_write",
 		"mali_video_version",
 		"gralloc_arm_no_external_afbc",
-		"mali_gralloc_api_tests",
 	],
 	properties: [
 		"cflags",
@@ -61,9 +60,6 @@ soong_config_bool_variable {
 }
 soong_config_bool_variable {
 	name: "gralloc_arm_no_external_afbc",
-}
-soong_config_bool_variable {
-	name: "mali_gralloc_api_tests",
 }
 
 arm_gralloc_capabilities_cc_defaults {
@@ -124,11 +120,6 @@ arm_gralloc_capabilities_cc_defaults {
 				],
 			},
 		},
-		mali_gralloc_api_tests: {
-			cflags: [
-				"-DMALI_GRALLOC_VENDOR_VPU=1",
-			]
-		}
 	},
 	arch: {
 		arm: {
@@ -150,7 +141,7 @@ arm_gralloc_capabilities_cc_defaults {
 		},
 	},
 	srcs: [
-		"src/gralloc_capabilities.cpp",
+		"src/capabilities.cpp",
 	],
 	shared_libs: [
 		"libhardware",

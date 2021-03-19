@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef MALI_FOURCC_H_
-#define MALI_FOURCC_H_
+#pragma once
 
 extern "C"
 {
@@ -65,6 +64,10 @@ extern "C"
 #define DRM_FORMAT_ABGR16161616F fourcc_code('A', 'B', '4', 'H')
 #endif
 
+#ifndef DRM_FORMAT_AXBXGXRX106106106106
+#define DRM_FORMAT_AXBXGXRX106106106106 fourcc_code('A', 'B', '1', '0')
+#endif
+
 #ifndef DRM_FORMAT_R16
 #define DRM_FORMAT_R16 fourcc_code('R', '1', '6', ' ')
 #endif
@@ -75,6 +78,14 @@ extern "C"
 
 #ifndef DRM_FORMAT_Q401
 #define DRM_FORMAT_Q401 fourcc_code('Q', '4', '0', '1')
+#endif
+
+#ifndef DRM_FORMAT_NV15
+#define DRM_FORMAT_NV15 fourcc_code('N', 'V', '1', '5') /* 2x2 subsampled Cr:Cb plane */
+#endif
+
+#ifndef DRM_FORMAT_MOD_GENERIC_16_16_TILE
+#define DRM_FORMAT_MOD_GENERIC_16_16_TILE ((((__u64)0x04) << 56) | (2 & 0x00ffffffffffffffULL))
 #endif
 
 /* ARM specific modifiers. */
@@ -145,6 +156,10 @@ extern "C"
 #define AFBC_FORMAT_MOD_BCH (((uint64_t)1) << 11)
 #endif
 
-}
+/* AFBC uncompressed storage mode. */
+#ifndef AFBC_FORMAT_MOD_USM
+#define AFBC_FORMAT_MOD_USM (((uint64_t)1) << 12)
+#endif
 
-#endif /* MALI_FOURCC_H_ */
+
+}

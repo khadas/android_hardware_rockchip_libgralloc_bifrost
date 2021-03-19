@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
-#ifndef FORMAT_INFO_H_
-#define FORMAT_INFO_H_
-
-#include "mali_gralloc_buffer.h"
+#include "buffer.h"
 
 typedef uint8_t format_support_flags;
 
@@ -68,6 +66,8 @@ typedef struct
 	bool linear;                    /* Linear/uncompressed supported. */
 	bool yuv_transform;             /* Supports AFBC YUV transform: 3+ channel RGB (strict R-G-B-? order) with less than 12-bit per sample. */
 	bool flex;                      /* Linear version of format can be represented as flex. */
+	bool block_linear;              /* Format supports 16x16 Block Linear layout */
+
 	/* Computes the total number of components in the format. */
 	int total_components() const
 	{
@@ -112,5 +112,3 @@ void get_format_dataspace(uint32_t base_format,
                           android_dataspace_t *dataspace,
                           mali_gralloc_yuv_info *yuv_info);
 extern bool sanitize_formats(void);
-
-#endif

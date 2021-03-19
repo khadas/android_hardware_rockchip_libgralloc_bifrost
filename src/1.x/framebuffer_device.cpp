@@ -35,15 +35,15 @@
 
 #include <hardware/gralloc1.h>
 
-#include "1.x/mali_gralloc_module.h"
-#include "mali_gralloc_private_interface_types.h"
-#include "mali_gralloc_buffer.h"
-#include "gralloc_helper.h"
-#include "1.x/gralloc_vsync.h"
-#include "core/mali_gralloc_bufferaccess.h"
-#include "fbdev/mali_gralloc_framebuffer.h"
-#include "allocator/mali_gralloc_ion.h"
-#include "gralloc_buffer_priv.h"
+#include "1.x/module.h"
+#include "private_interface_types.h"
+#include "buffer.h"
+#include "helper_functions.h"
+#include "1.x/vsync.h"
+#include "core/buffer_access.h"
+#include "fbdev/framebuffer.h"
+#include "allocator/ion_support.h"
+#include "gralloc/attributes.h"
 
 #define STANDARD_LINUX_SCREEN
 

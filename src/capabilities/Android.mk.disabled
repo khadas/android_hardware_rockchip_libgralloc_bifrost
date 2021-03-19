@@ -26,7 +26,7 @@ LOCAL_MULTILIB := both
 
 LOCAL_C_INCLUDES := $(GRALLOC_SRC_PATH)
 
-LOCAL_SRC_FILES := src/gralloc_capabilities.cpp
+LOCAL_SRC_FILES := src/capabilities.cpp
 
 LOCAL_SHARED_LIBRARIES := libhardware liblog libcutils libsync libutils
 # General compilation flags

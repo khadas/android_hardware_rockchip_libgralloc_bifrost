@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
 #include <hardware/hardware.h>
-#include "gralloc_priv.h"
-#include "1.x/mali_gralloc_module.h"
-#include "core/mali_gralloc_bufferdescriptor.h"
+#include "gralloc_version.h"
+#include "1.x/module.h"
+#include "core/buffer_descriptor.h"
 
 // Create a framebuffer device
 int framebuffer_device_open(hw_module_t const *module, const char *name, hw_device_t **device);

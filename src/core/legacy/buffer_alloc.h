@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-#ifndef BUFFER_ALLOC_H_
-#define BUFFER_ALLOC_H_
+#pragma once
 
 namespace legacy
 {
@@ -68,5 +67,3 @@ namespace legacy
 	void get_afbc_alignment(const int width, const int height, const alloc_type_t type,
 	                        int * const w_aligned, int * const h_aligned);
 }
-
-#endif
