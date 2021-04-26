@@ -109,6 +109,7 @@ typedef enum
 	MALI_GRALLOC_FORMAT_INTERNAL_P210,
 	MALI_GRALLOC_FORMAT_INTERNAL_Y210,
 	MALI_GRALLOC_FORMAT_INTERNAL_Y410,
+	MALI_GRALLOC_FORMAT_INTERNAL_YU12,
 
 	/*
 	 * Single-plane (I = interleaved) variants of 8/10-bit YUV formats,
@@ -365,6 +366,10 @@ static inline uint64_t get_modifier_from_gralloc_format(uint64_t format)
 #define MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_RGBA16161616 ((uint64_t)1 << 13)
 
 
+#define MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_READ ((uint64_t)1 << 16)
+#define MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_WRITE ((uint64_t)1 << 17)
+#define MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_10_READ_WRITE ((uint64_t)1 << 18)
+
 #define MALI_GRALLOC_FORMAT_CAPABILITY_PIXFMT_RGBA1010102 ((uint64_t)1 << 32)
 #define MALI_GRALLOC_FORMAT_CAPABILITY_PIXFMT_RGBA16161616 ((uint64_t)1 << 33)
 
@@ -392,7 +397,6 @@ void mali_gralloc_adjust_dimensions(const uint64_t internal_format,
 uint64_t mali_gralloc_select_format(const uint64_t req_format,
                                     const mali_gralloc_format_type type,
                                     const uint64_t usage,
-                                    const int buffer_size,
                                     uint64_t * const internal_format);
 
 bool is_subsampled_yuv(const uint32_t base_format);

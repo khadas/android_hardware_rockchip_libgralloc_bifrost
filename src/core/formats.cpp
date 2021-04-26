@@ -664,6 +664,24 @@ static format_support_flags is_format_supported(const int32_t fmt_idx,
 			}
 		}
 	}
+	if (f_flags & F_BL_YUV)
+	{
+		if (!(formats[fmt_idx].block_linear && formats[fmt_idx].is_yuv))
+		{
+			f_flags &= ~F_BL_YUV;
+		}
+		else if (formats[fmt_idx].bps == 8 && (((consumer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_READ) == 0) ||
+		                                       ((producer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_WRITE) == 0)))
+		{
+			f_flags &= ~F_BL_YUV;
+		}
+		else if (formats[fmt_idx].bps == 10 &&
+		         ((consumer_caps & producer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_10_READ_WRITE) == 0))
+		{
+			f_flags &= ~F_BL_YUV;
+		}
+	}
+
 	if (f_flags != F_NONE)
 	{
 		if (formats[fmt_idx].id == MALI_GRALLOC_FORMAT_INTERNAL_RGBA_1010102 &&
@@ -902,6 +920,28 @@ static uint64_t get_afbc_format(const uint32_t base_format,
 	return alloc_format;
 }
 
+static uint64_t get_bl_format(const uint32_t base_format, const uint64_t producer_caps, const uint64_t consumer_caps)
+{
+	uint64_t alloc_format = base_format;
+
+	if (producer_caps & consumer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT)
+	{
+		if ((producer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_WRITE &&
+		     (consumer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_READ)) ||
+		    ((producer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_10_READ_WRITE) &&
+		     (consumer_caps & MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_10_READ_WRITE)))
+		{
+			alloc_format |= MALI_GRALLOC_INTFMT_BLOCK_LINEAR_BASIC;
+		}
+		else
+		{
+			return base_format;
+		}
+	}
+
+	return alloc_format;
+}
+
 /*
  * Obtains the 'active' capabilities (for producers/consumers) by applying
  * additional constraints to the capabilities declared for each IP. Some rules
@@ -923,8 +963,7 @@ static void get_active_caps(const format_info_t format,
                             const uint16_t producers,
                             const uint16_t consumers,
                             uint64_t * const producer_active_caps,
-                            uint64_t * const consumer_active_caps,
-                            const int buffer_size)
+                            uint64_t * const consumer_active_caps)
 {
 	const uint64_t producer_caps = (producer_active_caps) ? *producer_active_caps : 0;
 	const uint64_t consumer_caps = (consumer_active_caps) ? *consumer_active_caps : 0;
@@ -971,29 +1010,6 @@ static void get_active_caps(const format_info_t format,
 			{
 				consumer_mask &= ~MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_SPLITBLK;
 			}
-		}
-	}
-
-	if (consumers & MALI_GRALLOC_CONSUMER_DPU)
-	{
-		bool afbc_allowed = false;
-
-        GRALLOC_UNUSED(buffer_size);
-
-#if MALI_DISPLAY_VERSION == 550 || MALI_DISPLAY_VERSION == 650
-#if GRALLOC_DISP_W != 0 && GRALLOC_DISP_H != 0
-#define GRALLOC_AFBC_MIN_SIZE 75
-		/* Disable AFBC based on buffer dimensions */
-		afbc_allowed = ((buffer_size * 100) / (GRALLOC_DISP_W * GRALLOC_DISP_H)) >= GRALLOC_AFBC_MIN_SIZE;
-#else /* If display size is not valid then always allow AFBC */
-		afbc_allowed = true;
-#endif
-#else /* For cetus, always allow AFBC */
-		afbc_allowed = true;
-#endif
-		if (!afbc_allowed)
-		{
-			consumer_mask &= ~MALI_GRALLOC_FORMAT_CAPABILITY_AFBCENABLE_MASK;
 		}
 	}
 
@@ -1066,8 +1082,7 @@ bool get_supported_format(const uint32_t base_format,
 		consumer_nodpu_caps = get_consumer_caps(consumers_nodpu);
 		get_active_caps(formats[fmt_idx],
 		                producers, consumers_nodpu,
-		                NULL, &consumer_nodpu_caps,
-		                0 /* N/A without DPU consumer */);
+		                NULL, &consumer_nodpu_caps);
 
 		fmt_supported->f_flags = is_format_supported(fmt_idx,
 	                                                 ip_fmt_idx,
@@ -1107,9 +1122,26 @@ bool get_supported_format(const uint32_t base_format,
 			fmt_supported->f_flags &= ~F_AFBC;
 		}
 
+		if ((fmt_supported->f_flags & F_AFBC) != 0)
+		{
+			/* Disable BL if an AFBC format has been selected. */
+			fmt_supported->f_flags &= ~F_BL_YUV;
+		}
+
 		/* Store any format modifiers */
 		fmt_supported->format_ext = afbc_format & MALI_GRALLOC_INTFMT_EXT_MASK;
 	}
+
+	if (fmt_supported->f_flags & F_BL_YUV)
+	{
+		const uint64_t bl_format = get_bl_format(base_format, producer_active_caps, consumer_active_caps);
+
+		MALI_GRALLOC_LOGV("BL format: 0x%" PRIx64, bl_format);
+
+		/* Store any format modifiers */
+		fmt_supported->format_ext = bl_format & MALI_GRALLOC_INTFMT_EXT_MASK;
+	}
+
 	if ((fmt_supported->f_flags & F_AFBC) == 0)
 	{
 		fmt_supported->format_ext = 0;
@@ -1225,7 +1257,7 @@ uint64_t grade_format(const fmt_props &fmt, uint32_t req_format)
 		uint64_t fmt_ext;
 		uint64_t value;
 	} fmt_ext_values[]{
-		{ MALI_GRALLOC_INTFMT_AFBC_BASIC, 1 },
+		{ MALI_GRALLOC_INTFMT_AFBC_BASIC, 1 << 1 },
 		{ MALI_GRALLOC_INTFMT_AFBC_SPLITBLK, 1 },
 		{ MALI_GRALLOC_INTFMT_AFBC_WIDEBLK, 1 },
 		{ MALI_GRALLOC_INTFMT_AFBC_TILED_HEADERS, 1 },
@@ -1234,6 +1266,7 @@ uint64_t grade_format(const fmt_props &fmt, uint32_t req_format)
 		{ MALI_GRALLOC_INTFMT_AFBC_BCH, 1 },
 		{ MALI_GRALLOC_INTFMT_AFBC_YUV_TRANSFORM, 1 },
 		{ MALI_GRALLOC_INTFMT_AFBC_SPARSE, 1 },
+		{ MALI_GRALLOC_INTFMT_BLOCK_LINEAR_BASIC, 1 },
 	};
 	for (auto& ext : fmt_ext_values)
 	{
@@ -1921,7 +1954,6 @@ static uint64_t rk_gralloc_select_format(const uint64_t req_format,
 uint64_t mali_gralloc_select_format(const uint64_t req_format,
                                     const mali_gralloc_format_type type,
                                     const uint64_t usage,
-                                    const int buffer_size,
                                     uint64_t * const internal_format)
 {
 /* < 若 USE_RK_SELECTING_FORMAT_MANNER 为 1, 则将使用 rk 的方式来选择 alloc_format 和 internal_format.> */
@@ -2025,8 +2057,7 @@ uint64_t mali_gralloc_select_format(const uint64_t req_format,
 
 		get_active_caps(formats[req_fmt_idx],
 		                producers, consumers,
-		                &producer_active_caps, &consumer_active_caps,
-		                buffer_size);
+		                &producer_active_caps, &consumer_active_caps);
 
 		MALI_GRALLOC_LOGV("Producer caps (active): 0x%" PRIx64 ", Consumer caps (active): 0x%" PRIx64,
 		      producer_active_caps, consumer_active_caps);

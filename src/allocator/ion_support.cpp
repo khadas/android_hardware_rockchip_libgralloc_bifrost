@@ -117,7 +117,6 @@ struct ion_device
 	                        int *min_pgsz);
 
 	enum ion_heap_type pick_ion_heap(uint64_t usage);
-	bool check_buffers_sharable(const gralloc_buffer_descriptor_t *descriptors, uint32_t numDescriptors);
 
 private:
 	int ion_client;
@@ -372,54 +371,6 @@ enum ion_heap_type ion_device::pick_ion_heap(uint64_t usage)
 	}
 
 	return heap_type;
-}
-
-
-bool ion_device::check_buffers_sharable(const gralloc_buffer_descriptor_t *descriptors,
-                                   uint32_t numDescriptors)
-{
-	enum ion_heap_type shared_backend_heap_type = ION_HEAP_TYPE_INVALID;
-	unsigned int shared_ion_flags = 0;
-	uint64_t usage;
-	uint32_t i;
-
-	if (numDescriptors <= 1)
-	{
-		return false;
-	}
-
-	for (i = 0; i < numDescriptors; i++)
-	{
-		unsigned int ion_flags;
-		enum ion_heap_type heap_type;
-
-		buffer_descriptor_t *bufDescriptor = (buffer_descriptor_t *)descriptors[i];
-
-		usage = bufDescriptor->consumer_usage | bufDescriptor->producer_usage;
-
-		heap_type = pick_ion_heap(usage);
-		if (heap_type == ION_HEAP_TYPE_INVALID)
-		{
-			return false;
-		}
-
-		set_ion_flags(heap_type, usage, NULL, &ion_flags);
-
-		if (shared_backend_heap_type != ION_HEAP_TYPE_INVALID)
-		{
-			if (shared_backend_heap_type != heap_type || shared_ion_flags != ion_flags)
-			{
-				return false;
-			}
-		}
-		else
-		{
-			shared_backend_heap_type = heap_type;
-			shared_ion_flags = ion_flags;
-		}
-	}
-
-	return true;
 }
 
 static int get_max_buffer_descriptor_index(const gralloc_buffer_descriptor_t *descriptors, uint32_t numDescriptors)
@@ -713,14 +664,12 @@ static void mali_gralloc_ion_free_internal(buffer_handle_t * const pHandle,
  * @param descriptors     [in]    Buffer request descriptors
  * @param numDescriptors  [in]    Number of descriptors
  * @param pHandle         [out]   Handle for each allocated buffer
- * @param shared_backend  [out]   Shared buffers flag
  *
  * @return File handle which can be used for allocation, on success
  *         -1, otherwise.
  */
 int mali_gralloc_ion_allocate(const gralloc_buffer_descriptor_t *descriptors,
-                              uint32_t numDescriptors, buffer_handle_t *pHandle,
-                              bool *shared_backend)
+                              uint32_t numDescriptors, buffer_handle_t *pHandle)
 {
 	static int support_protected = 1;
 	unsigned int priv_heap_flag = 0;
@@ -738,155 +687,64 @@ int mali_gralloc_ion_allocate(const gralloc_buffer_descriptor_t *descriptors,
 		return -1;
 	}
 
-	*shared_backend = dev->check_buffers_sharable(descriptors, numDescriptors);
-
-	if (*shared_backend)
+	for (i = 0; i < numDescriptors; i++)
 	{
-		buffer_descriptor_t *max_bufDescriptor;
-
-		max_buffer_index = get_max_buffer_descriptor_index(descriptors, numDescriptors);
-		max_bufDescriptor = (buffer_descriptor_t *)(descriptors[max_buffer_index]);
-		usage = max_bufDescriptor->consumer_usage | max_bufDescriptor->producer_usage;
+		buffer_descriptor_t *bufDescriptor = (buffer_descriptor_t *)(descriptors[i]);
+		usage = bufDescriptor->consumer_usage | bufDescriptor->producer_usage;
 
 		heap_type = dev->pick_ion_heap(usage);
 		if (heap_type == ION_HEAP_TYPE_INVALID)
 		{
 			MALI_GRALLOC_LOGE("Failed to find an appropriate ion heap");
+			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
 			return -1;
 		}
 
 		set_ion_flags(heap_type, usage, &priv_heap_flag, &ion_flags);
 
-		shared_fd = dev->alloc_from_ion_heap(usage, max_bufDescriptor->size, heap_type, ion_flags, &min_pgsz);
+		shared_fd = dev->alloc_from_ion_heap(usage, bufDescriptor->size, heap_type, ion_flags, &min_pgsz);
 
 		if (shared_fd < 0)
 		{
-			MALI_GRALLOC_LOGE("ion_alloc failed form client: ( %d )", dev->client());
+			MALI_GRALLOC_LOGE("ion_alloc failed from client ( %d )", dev->client());
+
+			/* need to free already allocated memory. not just this one */
+			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
+
 			return -1;
 		}
 
-		for (i = 0; i < numDescriptors; i++)
+		private_handle_t *hnd = make_private_handle(
+		    private_handle_t::PRIV_FLAGS_USES_ION | priv_heap_flag, bufDescriptor->size,
+		    bufDescriptor->consumer_usage, bufDescriptor->producer_usage, shared_fd, bufDescriptor->hal_format,
+		    bufDescriptor->old_internal_format, bufDescriptor->alloc_format,
+		    bufDescriptor->width, bufDescriptor->height, bufDescriptor->pixel_stride,
+		    bufDescriptor->old_alloc_width, bufDescriptor->old_alloc_height, bufDescriptor->old_byte_stride,
+		    bufDescriptor->size, bufDescriptor->layer_count, bufDescriptor->plane_info);
+
+		if (NULL == hnd)
 		{
-			buffer_descriptor_t *bufDescriptor = (buffer_descriptor_t *)(descriptors[i]);
-			int tmp_fd;
+			MALI_GRALLOC_LOGE("Private handle could not be created for descriptor:%d in non-shared usecase", i);
 
-			if (i != max_buffer_index)
-			{
-				tmp_fd = dup(shared_fd);
-
-				if (tmp_fd < 0)
-				{
-					MALI_GRALLOC_LOGE("Ion shared fd:%d of index:%d could not be duplicated for descriptor:%d",
-					      shared_fd, max_buffer_index, i);
-
-					/* It is possible that already opened shared_fd for the
-					 * max_bufDescriptor is also not closed */
-					if (i < max_buffer_index)
-					{
-						close(shared_fd);
-					}
-
-					/* Need to free already allocated memory. */
-					mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-					return -1;
-				}
-			}
-			else
-			{
-				tmp_fd = shared_fd;
-			}
-
-			private_handle_t *hnd = make_private_handle(
-			    private_handle_t::PRIV_FLAGS_USES_ION | priv_heap_flag, bufDescriptor->size,
-			    bufDescriptor->consumer_usage, bufDescriptor->producer_usage, tmp_fd, bufDescriptor->hal_format,
-			    bufDescriptor->old_internal_format, bufDescriptor->alloc_format,
-			    bufDescriptor->width, bufDescriptor->height, bufDescriptor->pixel_stride,
-			    bufDescriptor->old_alloc_width, bufDescriptor->old_alloc_height, bufDescriptor->old_byte_stride,
-			    max_bufDescriptor->size, bufDescriptor->layer_count, bufDescriptor->plane_info);
-
-			if (NULL == hnd)
-			{
-				MALI_GRALLOC_LOGE("Private handle could not be created for descriptor:%d of shared usecase", i);
-
-				/* Close the obtained shared file descriptor for the current handle */
-				close(tmp_fd);
-
-				/* It is possible that already opened shared_fd for the
-				 * max_bufDescriptor is also not closed */
-				if (i < max_buffer_index)
-				{
-					close(shared_fd);
-				}
-
-				/* Free the resources allocated for the previous handles */
-				mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-				return -1;
-			}
-
-			pHandle[i] = hnd;
+			/* Close the obtained shared file descriptor for the current handle */
+			close(shared_fd);
+			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
+			return -1;
 		}
-	}
-	else // if (*shared_backend)
-	{
-		for (i = 0; i < numDescriptors; i++)
+
+		if (((hnd->req_format == 0x30 || hnd->req_format == 0x31 || hnd->req_format == 0x32 ||
+			hnd->req_format == 0x33 || hnd->req_format == 0x34 || hnd->req_format == 0x35) &&
+			hnd->width <= 100 && hnd->height <= 100) ||
+			(hnd->req_format == 0x23 && hnd->width == 100 && hnd->height == 100))
 		{
-			buffer_descriptor_t *bufDescriptor = (buffer_descriptor_t *)(descriptors[i]);
-			usage = bufDescriptor->consumer_usage | bufDescriptor->producer_usage;
-
-			heap_type = dev->pick_ion_heap(usage);
-			if (heap_type == ION_HEAP_TYPE_INVALID)
-			{
-				MALI_GRALLOC_LOGE("Failed to find an appropriate ion heap");
-				mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-				return -1;
-			}
-
-			set_ion_flags(heap_type, usage, &priv_heap_flag, &ion_flags);
-
-			shared_fd = dev->alloc_from_ion_heap(usage, bufDescriptor->size, heap_type, ion_flags, &min_pgsz);
-
-			if (shared_fd < 0)
-			{
-				MALI_GRALLOC_LOGE("ion_alloc failed from client ( %d )", dev->client());
-
-				/* need to free already allocated memory. not just this one */
-				mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-
-				return -1;
-			}
-
-			private_handle_t *hnd = make_private_handle(
-			    private_handle_t::PRIV_FLAGS_USES_ION | priv_heap_flag, bufDescriptor->size,
-			    bufDescriptor->consumer_usage, bufDescriptor->producer_usage, shared_fd, bufDescriptor->hal_format,
-			    bufDescriptor->old_internal_format, bufDescriptor->alloc_format,
-			    bufDescriptor->width, bufDescriptor->height, bufDescriptor->pixel_stride,
-			    bufDescriptor->old_alloc_width, bufDescriptor->old_alloc_height, bufDescriptor->old_byte_stride,
-			    bufDescriptor->size, bufDescriptor->layer_count, bufDescriptor->plane_info);
-
-			if (NULL == hnd)
-			{
-				MALI_GRALLOC_LOGE("Private handle could not be created for descriptor:%d in non-shared usecase", i);
-
-				/* Close the obtained shared file descriptor for the current handle */
-				close(shared_fd);
-				mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-				return -1;
-			}
-
-			if (((hnd->req_format == 0x30 || hnd->req_format == 0x31 || hnd->req_format == 0x32 ||
-					hnd->req_format == 0x33 || hnd->req_format == 0x34 || hnd->req_format == 0x35) &&
-					hnd->width <= 100 && hnd->height <= 100) ||
-					(hnd->req_format == 0x23 && hnd->width == 100 && hnd->height == 100))
-			{
-				ALOGE("rk-debug workaround for NativeHareware format = %x producer_usage : 0x%" PRIx64 ", consumer_usage : 0x%" PRIx64,
+			ALOGE("rk-debug workaround for NativeHareware format = %x producer_usage : 0x%" PRIx64 ", consumer_usage : 0x%" PRIx64,
 					hnd->req_format, hnd->producer_usage, hnd->consumer_usage);
-				close(shared_fd);
-				mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-				return -1;
-			}
-
-			pHandle[i] = hnd;
+			close(shared_fd);
+			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
+			return -1;
 		}
+
+		pHandle[i] = hnd;
 	}
 
 	for (i = 0; i < numDescriptors; i++)
@@ -909,7 +767,7 @@ int mali_gralloc_ion_allocate(const gralloc_buffer_descriptor_t *descriptors,
 			}
 
 #if defined(GRALLOC_INIT_AFBC) && (GRALLOC_INIT_AFBC == 1)
-			if (is_format_afbc(bufDescriptor->alloc_format) && (!(*shared_backend)))
+			if (is_format_afbc(bufDescriptor->alloc_format))
 			{
 				mali_gralloc_ion_sync_start(hnd, true, true);
 

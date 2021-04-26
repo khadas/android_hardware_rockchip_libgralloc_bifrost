@@ -28,23 +28,16 @@ extern mali_gralloc_format_caps cam_runtime_caps;
 
 /*
  * Obtains the capabilities of each media system IP that form the producers
- * and consumers. Default capabilities are assigned (within this function) for
- * each IP, based on CFLAGS which specify the version of each IP (or, for GPU,
- * explicit features):
- * - GPU: MALI_GPU_SUPPORT_*
- * - DPU: MALI_DISPLAY_VERSION
- * - VPU: MALI_VIDEO_VERSION
+ * and consumers.
  *
- * See src/Android.mk for default values.
- *
- * These defaults can be overridden by runtime capabilities defined in the
+ * These runtime capabilities can be defined in the
  * userspace drivers (*.so) loaded for each IP. The drivers should define a
  * symbol named MALI_GRALLOC_FORMATCAPS_SYM_NAME, which contains all
  * capabilities from set MALI_GRALLOC_FORMAT_CAPABILITY_*
  *
  * @return none.
  *
- * NOTE: although no capabilities are returned, global variables global variables
+ * NOTE: although no capabilities are returned, global variables
  * named '*_runtime_caps' are updated.
  */
 void get_ip_capabilities(void);

@@ -92,6 +92,7 @@
 #define GRALLOC_USAGE_HW_COMPOSER GRALLOC1_CONSUMER_USAGE_HWCOMPOSER
 #define GRALLOC_USAGE_EXTERNAL_DISP 0x00002000U
 #define GRALLOC_USAGE_CURSOR GRALLOC1_CONSUMER_USAGE_CURSOR
+#define GRALLOC_USAGE_DECODER GRALLOC1_PRODUCER_USAGE_VIDEO_DECODER
 
 #define GRALLOC_USAGE_SENSOR_DIRECT_DATA GRALLOC1_PRODUCER_USAGE_SENSOR_DIRECT_DATA
 #define GRALLOC_USAGE_GPU_DATA_BUFFER GRALLOC1_CONSUMER_USAGE_GPU_DATA_BUFFER
@@ -242,13 +243,12 @@ typedef enum
 #define GRALLOC_USAGE_SENSOR_DIRECT_DATA static_cast<uint64_t>(hidl_common::BufferUsage::SENSOR_DIRECT_DATA)
 #define GRALLOC_USAGE_GPU_DATA_BUFFER static_cast<uint64_t>(hidl_common::BufferUsage::GPU_DATA_BUFFER)
 
-#endif
-
 /* Originally (Gralloc 0.x), Android did not provide an explicit DECODER usage. This was rectified in Android N-MR1/7.1
- * when Gralloc 1.0 defined GRALLOC1_PRODUCER_USAGE_VIDEO_DECODER. However, libstagefright continues
- * (currently, Android P/9.0) to use this old combination of flags to indicate decoder producer
+ * when Gralloc 1.0 defined GRALLOC1_PRODUCER_USAGE_VIDEO_DECODER.
  */
-#define GRALLOC_USAGE_DECODER (GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_HW_COMPOSER | GRALLOC_USAGE_EXTERNAL_DISP)
+#define GRALLOC_USAGE_DECODER static_cast<uint64_t>(hidl_common::BufferUsage::VIDEO_DECODER)
+
+#endif
 
 static const uint64_t VALID_USAGE =
     GRALLOC_USAGE_SW_READ_MASK |       /* 0x0FU */
@@ -265,6 +265,7 @@ static const uint64_t VALID_USAGE =
     GRALLOC_USAGE_HW_CAMERA_WRITE |    /* 1U << 17 */
     GRALLOC_USAGE_HW_CAMERA_READ |     /* 1U << 18 */
     GRALLOC_USAGE_RENDERSCRIPT |       /* 1U << 20 */
+    GRALLOC_USAGE_DECODER |            /* 1U << 22 */
 
     /* Producer and consumer usage are combined, but on Gralloc version 1 there is no way to differentiate these as they
      * are mapped to the same value (1U << 23). */

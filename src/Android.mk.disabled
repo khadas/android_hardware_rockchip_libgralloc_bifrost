@@ -52,28 +52,6 @@ MALI_GRALLOC_DPU_AEU_LIBRARY_32_PATH := "\"/vendor/lib/hw/\""
 GRALLOC_MAPPER?=0
 
 #
-# Static hardware defines
-#
-# These defines are used in case runtime detection does not find the
-# user-space driver to read out hardware capabilities
-
-# GPU support for AFBC 1.0
-MALI_GPU_SUPPORT_AFBC_BASIC?=0
-# GPU support for AFBC 1.1 block split
-MALI_GPU_SUPPORT_AFBC_SPLITBLK?=0
-# GPU support for AFBC 1.1 wide block
-MALI_GPU_SUPPORT_AFBC_WIDEBLK?=0
-# GPU support for AFBC 1.2 tiled headers
-MALI_GPU_SUPPORT_AFBC_TILED_HEADERS?=0
-# GPU support for writing AFBC YUV formats
-MALI_GPU_SUPPORT_AFBC_YUV_WRITE?=0
-
-# VPU version we support
-MALI_VIDEO_VERSION?=0
-# DPU version we support
-MALI_DISPLAY_VERSION?=0
-
-#
 # Software behaviour defines
 #
 
@@ -106,9 +84,6 @@ else
 endif
 # When enabled, buffers will never be allocated with AFBC
 GRALLOC_ARM_NO_EXTERNAL_AFBC?=0
-# Minimum buffer dimensions in pixels when buffer will use AFBC
-GRALLOC_DISP_W?=0
-GRALLOC_DISP_H?=0
 # Vsync backend(not used)
 GRALLOC_VSYNC_BACKEND?=default
 
@@ -124,35 +99,8 @@ endif
 GRALLOC_USE_ION_DMABUF_SYNC?=1
 
 ifeq ($(TARGET_BOARD_PLATFORM), juno)
-ifeq ($(MALI_MMSS), 1)
-
-# Use latest default MMSS build configuration if not already defined
-ifeq ($(MALI_DISPLAY_VERSION), 0)
-MALI_DISPLAY_VERSION = 650
-endif
-ifeq ($(MALI_VIDEO_VERSION), 0)
-MALI_VIDEO_VERSION = 550
-endif
-
 GRALLOC_FB_SWAP_RED_BLUE = 0
 GRALLOC_USE_ION_DMA_HEAP = 1
-endif
-endif
-
-ifeq ($(TARGET_BOARD_PLATFORM), armboard_v7a)
-ifeq ($(GRALLOC_MALI_DP),true)
-    GRALLOC_FB_SWAP_RED_BLUE = 0
-    GRALLOC_DISABLE_FRAMEBUFFER_HAL=1
-    MALI_DISPLAY_VERSION = 550
-    GRALLOC_USE_ION_DMA_HEAP=1
-endif
-endif
-
-ifneq ($(MALI_DISPLAY_VERSION), 0)
-# If Mali display is available, should disable framebuffer HAL
-GRALLOC_DISABLE_FRAMEBUFFER_HAL := 1
-# If Mali display is available, AFBC buffers should be initialised after allocation
-GRALLOC_INIT_AFBC := 1
 endif
 
 # When enabled, sets camera capability bit
@@ -173,7 +121,6 @@ GRALLOC_SHARED_CFLAGS := -ldl -Werror -DLOG_TAG="\"gralloc$(GRALLOC_VERSION_MAJO
                          -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION) -I$(GRALLOC_SRC_PATH)/include
 
 #Shared flags
-GRALLOC_SHARED_CFLAGS += -DMALI_DISPLAY_VERSION=$(MALI_DISPLAY_VERSION)
 GRALLOC_SHARED_CFLAGS += -DGRALLOC_VERSION_MAJOR=$(GRALLOC_VERSION_MAJOR)
 GRALLOC_SHARED_CFLAGS += -DHIDL_ALLOCATOR_VERSION_SCALED=$(HIDL_ALLOCATOR_VERSION_SCALED)
 GRALLOC_SHARED_CFLAGS += -DHIDL_MAPPER_VERSION_SCALED=$(HIDL_MAPPER_VERSION_SCALED)

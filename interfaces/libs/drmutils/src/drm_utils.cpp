@@ -43,6 +43,7 @@ const static std::unordered_map<uint64_t, table_entry> table =
 	{ MALI_GRALLOC_FORMAT_INTERNAL_RGBA_16161616, {DRM_FORMAT_ABGR16161616F, format_colormodel::rgb} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_RGBA_10101010, {DRM_FORMAT_AXBXGXRX106106106106, format_colormodel::rgb} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_YV12, {DRM_FORMAT_YVU420, format_colormodel::yuv} },
+	{ MALI_GRALLOC_FORMAT_INTERNAL_YU12, {DRM_FORMAT_YUV420, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_NV12, {DRM_FORMAT_NV12, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_NV15, {DRM_FORMAT_NV15, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_NV16, {DRM_FORMAT_NV16, format_colormodel::yuv} },

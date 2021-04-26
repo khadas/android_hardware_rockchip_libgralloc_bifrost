@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2018-2021 ARM Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -129,6 +129,13 @@ const format_info_t formats[] = {
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, .align_w_cpu = 16,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
 		.afbc = true, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
+	},
+	{
+		.id = MALI_GRALLOC_FORMAT_INTERNAL_YU12,
+		.npln = 3, .ncmp = { 1, 1, 1 }, .bps = 8, .bpp_afbc = { 0, 0, 0 }, .bpp = { 8, 8, 8 },
+		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, .align_w_cpu = 16,
+		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = true, .block_linear = false,
 	},
 	/* 422 (8-bit) */
 	{
@@ -432,13 +439,13 @@ const format_ip_support_t formats_ip_support[] = {
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV12,
 		.cpu_rd = F_LIN,
 		.cpu_wr = F_LIN,
-		.gpu_rd = F_LIN | F_AFBC,
-		.gpu_wr = F_LIN,
+		.gpu_rd = F_LIN | F_AFBC | F_BL_YUV,
+		.gpu_wr = F_LIN | F_BL_YUV,
 		.dpu_rd = F_LIN,
 		.dpu_wr = F_LIN,
 		.dpu_aeu_wr = F_NONE,
 		.vpu_rd = F_LIN,
-		.vpu_wr = F_LIN,
+		.vpu_wr = F_LIN | F_BL_YUV,
 		.cam_wr = F_NONE,
 	},
 	{
@@ -456,6 +463,19 @@ const format_ip_support_t formats_ip_support[] = {
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_YV12,
+		.cpu_rd = F_LIN,
+		.cpu_wr = F_LIN,
+		.gpu_rd = F_LIN,
+		.gpu_wr = F_LIN,
+		.dpu_rd = F_LIN,
+		.dpu_wr = F_NONE,
+		.dpu_aeu_wr = F_NONE,
+		.vpu_rd = F_LIN,
+		.vpu_wr = F_LIN,
+		.cam_wr = F_NONE,
+	},
+	{
+		.id = MALI_GRALLOC_FORMAT_INTERNAL_YU12,
 		.cpu_rd = F_LIN,
 		.cpu_wr = F_LIN,
 		.gpu_rd = F_LIN,
@@ -485,13 +505,13 @@ const format_ip_support_t formats_ip_support[] = {
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV16,
 		.cpu_rd = F_LIN,
 		.cpu_wr = F_LIN,
-		.gpu_rd = F_LIN | F_AFBC,
-		.gpu_wr = F_LIN,
+		.gpu_rd = F_LIN | F_AFBC | F_BL_YUV,
+		.gpu_wr = F_LIN | F_BL_YUV,
 		.dpu_rd = F_NONE,
 		.dpu_wr = F_NONE,
 		.dpu_aeu_wr = F_NONE,
 		.vpu_rd = F_NONE,
-		.vpu_wr = F_NONE,
+		.vpu_wr = F_BL_YUV,
 		.cam_wr = F_NONE,
 	},
 	/* 420 (10-bit) */
@@ -525,26 +545,26 @@ const format_ip_support_t formats_ip_support[] = {
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_P010,
 		.cpu_rd = F_LIN,
 		.cpu_wr = F_LIN,
-		.gpu_rd = F_LIN,
-		.gpu_wr = F_LIN,
+		.gpu_rd = F_LIN | F_BL_YUV,
+		.gpu_wr = F_LIN | F_BL_YUV,
 		.dpu_rd = F_LIN,
 		.dpu_wr = F_NONE,
 		.dpu_aeu_wr = F_NONE,
 		.vpu_rd = F_LIN,
-		.vpu_wr = F_LIN,
+		.vpu_wr = F_LIN | F_BL_YUV,
 		.cam_wr = F_NONE,
 	},
 	{
 		.id = MALI_GRALLOC_FORMAT_INTERNAL_NV15,
 		.cpu_rd = F_NONE,
 		.cpu_wr = F_NONE,
-		.gpu_rd = F_NONE,
+		.gpu_rd = F_BL_YUV,
 		.gpu_wr = F_NONE,
 		.dpu_rd = F_NONE,
 		.dpu_wr = F_NONE,
 		.dpu_aeu_wr = F_NONE,
 		.vpu_rd = F_NONE,
-		.vpu_wr = F_NONE,
+		.vpu_wr = F_BL_YUV,
 		.cam_wr = F_NONE,
 	},
 	/* 422 (10-bit) */
@@ -1049,9 +1069,9 @@ bool sanitize_formats(void)
 				MALI_GRALLOC_LOGE("Format [id:0x%" PRIx32 "] should not have bpp defined for plane: %d", format->id, pln);
 				fail = true;
 			}
-			else if (!format->linear && (format->bpp[pln] != 0))
+			else if (!format->linear && !format->block_linear && (format->bpp[pln] != 0))
 			{
-				MALI_GRALLOC_LOGE("Format [id:0x%" PRIx32 "] which doesn't support linear should not have bpp defined", format->id);
+				MALI_GRALLOC_LOGE("Format [id:0x%" PRIx32 "] which doesn't support linear or block linear should not have bpp defined", format->id);
 				fail = true;
 			}
 

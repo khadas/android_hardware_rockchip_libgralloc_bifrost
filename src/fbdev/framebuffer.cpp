@@ -309,7 +309,6 @@ static int fb_alloc_from_ion_module(mali_gralloc_module *m, int width, int heigh
 {
 	buffer_descriptor_t fb_buffer_descriptor;
 	gralloc_buffer_descriptor_t gralloc_buffer_descriptor[1];
-	bool shared = false;
 	int err = 0;
 
 	fb_buffer_descriptor.width = width;
@@ -334,7 +333,7 @@ static int fb_alloc_from_ion_module(mali_gralloc_module *m, int width, int heigh
 
 	gralloc_buffer_descriptor[0] = (gralloc_buffer_descriptor_t)(&fb_buffer_descriptor);
 
-	err = mali_gralloc_ion_allocate(gralloc_buffer_descriptor, 1, pHandle, &shared);
+	err = mali_gralloc_ion_allocate(gralloc_buffer_descriptor, 1, pHandle);
 
 	return err;
 }

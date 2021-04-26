@@ -102,50 +102,10 @@ void get_ip_capabilities(void)
 	cpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_PIXFMT_RGBA16161616;
 
 	/* Determine DPU IP capabilities */
-	if (!get_block_capabilities(MALI_GRALLOC_DPU_LIBRARY_PATH MALI_GRALLOC_DPU_LIB_NAME, &dpu_runtime_caps))
-	{
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_READ;
-#if MALI_DISPLAY_VERSION >= 500
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_BASIC;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WRITE_NON_SPARSE;
-#if MALI_DISPLAY_VERSION >= 550
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_SPLITBLK;
-#endif
-#endif
-#if MALI_DISPLAY_VERSION == 71
-		/* Cetus adds support for wide block and tiled headers. */
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_BASIC;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_SPLITBLK;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WIDEBLK;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WRITE_NON_SPARSE;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_TILED_HEADERS;
-		dpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_PIXFMT_RGBA1010102;
-
-		/* DPU Architecture v1.0 specification, chapter 5.16 - AFBC encoding process */
-		dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT;
-		dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_BASIC;
-		dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_SPLITBLK;
-		dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WRITE_NON_SPARSE;
-		dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_TILED_HEADERS;
-		dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_WRITE;
-		dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_PIXFMT_RGBA1010102;
-#endif
-	}
+	get_block_capabilities(MALI_GRALLOC_DPU_LIBRARY_PATH MALI_GRALLOC_DPU_LIB_NAME, &dpu_runtime_caps);
 
 	/* Determine DPU AEU IP capabilities */
-	if (!get_block_capabilities(MALI_GRALLOC_DPU_AEU_LIBRARY_PATH MALI_GRALLOC_DPU_AEU_LIB_NAME, &dpu_aeu_runtime_caps))
-	{
-		if (dpu_runtime_caps.caps_mask & MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_TILED_HEADERS)
-		{
-			/* Based on DPU caps when DPU supports AFBC tiled headers. */
-			dpu_aeu_runtime_caps.caps_mask = dpu_runtime_caps.caps_mask;
-			dpu_aeu_runtime_caps.caps_mask &= ~MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WIDEBLK;
-			dpu_aeu_runtime_caps.caps_mask &= ~MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_READ;
-			dpu_aeu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_WRITE;
-		}
-	}
+	get_block_capabilities(MALI_GRALLOC_DPU_AEU_LIBRARY_PATH MALI_GRALLOC_DPU_AEU_LIB_NAME, &dpu_aeu_runtime_caps);
 
 	/* Determine GPU IP capabilities */
 	if (access(MALI_GRALLOC_GPU_LIBRARY_PATH1 MALI_GRALLOC_GPU_LIB_NAME, R_OK) == 0)
@@ -157,55 +117,8 @@ void get_ip_capabilities(void)
 		get_block_capabilities(MALI_GRALLOC_GPU_LIBRARY_PATH2 MALI_GRALLOC_GPU_LIB_NAME, &gpu_runtime_caps);
 	}
 
-	if ((gpu_runtime_caps.caps_mask & MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT) == 0)
-	{
-#if defined(MALI_GPU_SUPPORT_AFBC_BASIC) && (MALI_GPU_SUPPORT_AFBC_BASIC == 1)
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT;
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_BASIC;
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_READ;
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_PIXFMT_RGBA1010102;
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_PIXFMT_RGBA16161616;
-
-#if defined(MALI_GPU_SUPPORT_AFBC_YUV_WRITE) && (MALI_GPU_SUPPORT_AFBC_YUV_WRITE == 1)
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_WRITE;
-#endif
-
-#if defined(MALI_GPU_SUPPORT_AFBC_SPLITBLK) && (MALI_GPU_SUPPORT_AFBC_SPLITBLK == 1)
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_SPLITBLK;
-#endif
-
-#if defined(MALI_GPU_SUPPORT_AFBC_WIDEBLK) && (MALI_GPU_SUPPORT_AFBC_WIDEBLK == 1)
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_SPLITBLK;
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WIDEBLK;
-#endif
-
-#if defined(MALI_GPU_SUPPORT_AFBC_TILED_HEADERS) && (MALI_GPU_SUPPORT_AFBC_TILED_HEADERS == 1)
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_SPLITBLK;
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WIDEBLK;
-		gpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_TILED_HEADERS;
-#endif
-#endif /* defined(MALI_GPU_SUPPORT_AFBC_BASIC) && (MALI_GPU_SUPPORT_AFBC_BASIC == 1) */
-	}
-
 	/* Determine VPU IP capabilities */
-	if (!get_block_capabilities(MALI_GRALLOC_VPU_LIBRARY_PATH MALI_GRALLOC_VPU_LIB_NAME, &vpu_runtime_caps))
-	{
-#if MALI_VIDEO_VERSION == 500 || MALI_VIDEO_VERSION == 550
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_BASIC;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WRITE_NON_SPARSE;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_WRITE;
-#endif
-
-#if MALI_VIDEO_VERSION == 61
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_OPTIONS_PRESENT;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_BASIC;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_WRITE_NON_SPARSE;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_TILED_HEADERS;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_READ;
-		vpu_runtime_caps.caps_mask |= MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_WRITE;
-#endif
-	}
+	get_block_capabilities(MALI_GRALLOC_VPU_LIBRARY_PATH MALI_GRALLOC_VPU_LIB_NAME, &vpu_runtime_caps);
 
 /* Build specific capability changes */
 #if defined(GRALLOC_ARM_NO_EXTERNAL_AFBC) && (GRALLOC_ARM_NO_EXTERNAL_AFBC == 1)

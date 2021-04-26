@@ -358,7 +358,13 @@ int mali_gralloc_lock_ycbcr(const buffer_handle_t buffer,
 			ycbcr->cb = (char *)hnd->base + hnd->plane_info[2].offset;
 			ycbcr->chroma_step = 1;
 			break;
-
+		case MALI_GRALLOC_FORMAT_INTERNAL_YU12:
+			/* U plane, V plane */
+			ycbcr->cstride = hnd->plane_info[1].byte_stride;
+			ycbcr->cb = (char *)hnd->base + hnd->plane_info[1].offset;
+			ycbcr->cr = (char *)hnd->base + hnd->plane_info[2].offset;
+			ycbcr->chroma_step = 1;
+			break;
 		default:
 			MALI_GRALLOC_LOGE("Buffer:%p of format 0x%" PRIx64 "can't be represented in"
 			     " android_ycbcr format", hnd, hnd->alloc_format);
@@ -622,7 +628,22 @@ int mali_gralloc_lock_flex(const buffer_handle_t buffer, const uint64_t usage, c
 		                      hnd->plane_info[1].byte_stride, 2, 2,
 		                      &flex_layout->planes[2]);
 		break;
+	case MALI_GRALLOC_FORMAT_INTERNAL_YU12:
+		/* Y:V:U 4:2:0 */
+		flex_layout->format = FLEX_FORMAT_YCbCr;
 
+		set_flex_plane_params((uint8_t *)hnd->base, FLEX_COMPONENT_Y, 8, 8, 1,
+		                      hnd->plane_info[0].byte_stride, 1, 1,
+		                      &flex_layout->planes[0]);
+		set_flex_plane_params((uint8_t *)hnd->base + hnd->plane_info[1].offset,
+		                      FLEX_COMPONENT_Cb, 8, 8, 1,
+		                      hnd->plane_info[2].byte_stride, 2, 2,
+		                      &flex_layout->planes[1]);
+		set_flex_plane_params((uint8_t *)hnd->base + hnd->plane_info[2].offset,
+		                      FLEX_COMPONENT_Cr, 8, 8, 1,
+		                      hnd->plane_info[1].byte_stride, 2, 2,
+		                      &flex_layout->planes[2]);
+		break;
 	case MALI_GRALLOC_FORMAT_INTERNAL_P010:
 		/* Y:UV 4:2:0 */
 		flex_layout->format = FLEX_FORMAT_YCbCr;

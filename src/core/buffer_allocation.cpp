@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2016-2021 ARM Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -551,7 +551,18 @@ static void calc_allocation_size(const int width,
 		else if (alloc_type.is_block_linear())
 		{
 			assert((plane_info[plane].alloc_width * format.bpp[plane]) % 8 == 0);
-			plane_info[plane].byte_stride = (plane_info[plane].alloc_width * 16 * format.bpp[plane]) / 8;
+			uint32_t sample_height = 16;
+			uint32_t sample_width = 16;
+			if (plane > 0)
+			{
+				sample_height /= format.vsub;
+				sample_width /= format.hsub;
+			}
+			uint32_t bytes_per_block = sample_height * sample_width * format.bpp[plane] / 8;
+			uint32_t number_of_x_blocks = plane_info[0].alloc_width / 16;
+
+			/* stride becomes equal to a row of blocks */
+			plane_info[plane].byte_stride = number_of_x_blocks * bytes_per_block;
 		}
 		else
 		{
@@ -661,7 +672,8 @@ static void calc_allocation_size(const int width,
 		}
 		else if (alloc_type.is_block_linear())
 		{
-			body_size = plane_info[plane].byte_stride * (plane_info[plane].alloc_height / 16);
+			uint32_t number_of_blocks_y = plane_info[0].alloc_height / 16;
+			body_size = plane_info[plane].byte_stride * number_of_blocks_y;
 		}
 		else
 		{
@@ -777,7 +789,6 @@ int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescripto
 	bufDescriptor->alloc_format = mali_gralloc_select_format(bufDescriptor->hal_format,
 	                                                         bufDescriptor->format_type,
 	                                                         usage,
-	                                                         bufDescriptor->width * bufDescriptor->height,
 	                                                         &bufDescriptor->old_internal_format);
 
 	if(((bufDescriptor->alloc_format == 0x30 || bufDescriptor->alloc_format == 0x31 || bufDescriptor->alloc_format == 0x32 ||
@@ -1061,10 +1072,8 @@ int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescripto
 
 
 int mali_gralloc_buffer_allocate(const gralloc_buffer_descriptor_t *descriptors,
-                                 uint32_t numDescriptors, buffer_handle_t *pHandle, bool *shared_backend)
+                                 uint32_t numDescriptors, buffer_handle_t *pHandle)
 {
-	bool shared = false;
-	uint64_t backing_store_id = 0x0;
 	int err;
 
 	for (uint32_t i = 0; i < numDescriptors; i++)
@@ -1080,15 +1089,10 @@ int mali_gralloc_buffer_allocate(const gralloc_buffer_descriptor_t *descriptors,
 	}
 
 	/* Allocate ION backing store memory */
-	err = mali_gralloc_ion_allocate(descriptors, numDescriptors, pHandle, &shared);
+	err = mali_gralloc_ion_allocate(descriptors, numDescriptors, pHandle);
 	if (err < 0)
 	{
 		return err;
-	}
-
-	if (shared)
-	{
-		backing_store_id = getUniqueId();
 	}
 
 	for (uint32_t i = 0; i < numDescriptors; i++)
@@ -1099,21 +1103,7 @@ int mali_gralloc_buffer_allocate(const gralloc_buffer_descriptor_t *descriptors,
 
 		mali_gralloc_dump_buffer_add(hnd);
 
-		if (shared)
-		{
-			/*each buffer will share the same backing store id.*/
-			hnd->backing_store_id = backing_store_id;
-		}
-		else
-		{
-			/* each buffer will have an unique backing store id.*/
-			hnd->backing_store_id = getUniqueId();
-		}
-	}
-
-	if (NULL != shared_backend)
-	{
-		*shared_backend = shared;
+		hnd->backing_store_id = getUniqueId();
 	}
 
 	return 0;

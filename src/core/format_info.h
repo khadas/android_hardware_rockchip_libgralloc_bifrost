@@ -31,12 +31,13 @@ typedef uint8_t format_support_flags;
 #define F_AFBC_SWIZ ((uint8_t)1 << 2)
 
 
+#define F_BL_YUV ((uint8_t)1 << 4)
+
 typedef struct
 {
 	uint16_t width;
 	uint16_t height;
 } rect_t;
-
 
 /*
  * Pixel format information.
@@ -79,6 +80,15 @@ typedef struct
 		return sum;
 	}
 } format_info_t;
+
+/* Returns true if the formats are the same or if they only differ with respect to the order of components.
+	False otherwise. */
+static inline bool is_same_or_components_reordered(format_info_t x, format_info_t y)
+{
+	return x.npln == y.npln && x.total_components() == y.total_components() && x.bps == y.bps && x.is_yuv == y.is_yuv &&
+	       x.hsub == y.hsub && x.vsub == y.vsub;
+}
+
 
 typedef struct
 {

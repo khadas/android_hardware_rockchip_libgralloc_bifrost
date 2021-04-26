@@ -21,7 +21,7 @@
 #include "core/buffer_descriptor.h"
 
 int mali_gralloc_ion_allocate(const gralloc_buffer_descriptor_t *descriptors,
-                              uint32_t numDescriptors, buffer_handle_t *pHandle, bool *alloc_from_backing_store);
+                              uint32_t numDescriptors, buffer_handle_t *pHandle);
 void mali_gralloc_ion_free(private_handle_t * const hnd);
 int mali_gralloc_ion_sync_start(const private_handle_t * const hnd,
                                 const bool read, const bool write);

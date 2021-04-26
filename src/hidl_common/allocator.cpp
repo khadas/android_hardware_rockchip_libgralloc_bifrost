@@ -75,7 +75,7 @@ void allocate(const buffer_descriptor_t &bufferDescriptor, uint32_t count, IAllo
 		else
 #endif
 		{
-			allocResult = mali_gralloc_buffer_allocate(grallocBufferDescriptor, 1, &tmpBuffer, nullptr);
+			allocResult = mali_gralloc_buffer_allocate(grallocBufferDescriptor, 1, &tmpBuffer);
 			if (allocResult != 0)
 			{
 				MALI_GRALLOC_LOGE("%s, buffer allocation failed with %d", __func__, allocResult);

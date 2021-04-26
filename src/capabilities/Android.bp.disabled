@@ -68,57 +68,10 @@ arm_gralloc_capabilities_cc_defaults {
 		"arm_gralloc_defaults",
 	],
 	soong_config_variables: {
-		mali_gpu_support_afbc_basic: {
-			cflags: [
-				"-DMALI_GPU_SUPPORT_AFBC_BASIC=1",
-			],
-		},
-		mali_gpu_support_afbc_splitblk: {
-			cflags: [
-				"-DMALI_GPU_SUPPORT_AFBC_SPLITBLK=1",
-			],
-		},
-		mali_gpu_support_afbc_wideblk: {
-			cflags: [
-				"-DMALI_GPU_SUPPORT_AFBC_WIDEBLK=1",
-			],
-		},
-		mali_gpu_support_afbc_tiled_headers: {
-			cflags: [
-				"-DMALI_GPU_SUPPORT_AFBC_TILED_HEADERS=1",
-			],
-		},
-		mali_gpu_support_afbc_yuv_write: {
-			cflags: [
-				"-DMALI_GPU_SUPPORT_AFBC_YUV_WRITE=1",
-			],
-		},
 		gralloc_arm_no_external_afbc: {
 			cflags: [
 				"-DGRALLOC_ARM_NO_EXTERNAL_AFBC=1",
 			],
-		},
-		mali_video_version: {
-			v0: {
-				cflags: [
-					"-DMALI_VIDEO_VERSION=0",
-				],
-			},
-			v500: {
-				cflags: [
-					"-DMALI_VIDEO_VERSION=500",
-				],
-			},
-			v550: {
-				cflags: [
-					"-DMALI_VIDEO_VERSION=550",
-				],
-			},
-			v61: {
-				cflags: [
-					"-DMALI_VIDEO_VERSION=61",
-				],
-			},
 		},
 	},
 	arch: {
