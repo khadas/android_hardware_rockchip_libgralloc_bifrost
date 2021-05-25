@@ -20,11 +20,6 @@ cc_defaults {
 	defaults: [
 		"arm_gralloc_defaults",
 	],
-	cflags: [
-		/* Minimum buffer dimensions in pixels when buffer will use AFBC */
-		"-DGRALLOC_DISP_W=0",
-		"-DGRALLOC_DISP_H=0",
-	],
 
 	srcs: [
 		"buffer_access.cpp",
