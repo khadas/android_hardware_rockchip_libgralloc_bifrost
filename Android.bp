@@ -61,6 +61,7 @@ arm_gralloc_cc_defaults {
 	},
 	header_libs: [
 		"libgralloc_headers",
+		"libhardware_rockchip_headers",
 	],
 	target: {
 		android: {

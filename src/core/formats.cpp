@@ -29,6 +29,7 @@
 #include <cutils/properties.h>
 
 #include <hardware/gralloc1.h>
+#include <hardware/hardware_rockchip.h>
 
 #include "gralloc_version.h"
 #include "buffer_allocation.h"
