@@ -39,13 +39,6 @@ GRALLOC_HWC_FB_DISABLE_AFBC?=0
 # When enabled, buffers will never be allocated with AFBC
 GRALLOC_ARM_NO_EXTERNAL_AFBC?=0
 
-GRALLOC_USE_ION_DMABUF_SYNC?=1
-
-ifeq ($(TARGET_BOARD_PLATFORM), juno)
-GRALLOC_FB_SWAP_RED_BLUE = 0
-GRALLOC_USE_ION_DMA_HEAP = 1
-endif
-
 # When enabled, sets camera capability bit
 GRALLOC_CAMERA_WRITE_RAW16?=1
 
@@ -66,7 +59,6 @@ SOONG_CONFIG_arm_gralloc := \
 	gralloc_hwc_force_bgra_8888 \
 	gralloc_hwc_fb_disable_afbc \
 	gralloc_arm_no_external_afbc \
-	gralloc_use_ion_dmabuf_sync \
 	gralloc_camera_write_raw16 \
 	mali_gralloc_api_tests \
 	gralloc_api_version
@@ -77,7 +69,6 @@ SOONG_CONFIG_arm_gralloc_gralloc_init_afbc := $(GRALLOC_INIT_AFBC)
 SOONG_CONFIG_arm_gralloc_gralloc_hwc_force_bgra_8888 := $(GRALLOC_HWC_FORCE_BGRA_8888)
 SOONG_CONFIG_arm_gralloc_gralloc_hwc_fb_disable_afbc := $(GRALLOC_HWC_FB_DISABLE_AFBC)
 SOONG_CONFIG_arm_gralloc_gralloc_arm_no_external_afbc := $(GRALLOC_ARM_NO_EXTERNAL_AFBC)
-SOONG_CONFIG_arm_gralloc_gralloc_use_ion_dmabuf_sync := $(GRALLOC_USE_ION_DMABUF_SYNC)
 SOONG_CONFIG_arm_gralloc_gralloc_camera_write_raw16 := $(GRALLOC_CAMERA_WRITE_RAW16)
 SOONG_CONFIG_arm_gralloc_mali_gralloc_api_tests := $(MALI_GRALLOC_API_TESTS)
 SOONG_CONFIG_arm_gralloc_gralloc_api_version := $(GRALLOC_API_VERSION)

@@ -96,13 +96,6 @@ else
     GRALLOC_USE_LEGACY_CALCS_LOCK?=1
 endif
 
-GRALLOC_USE_ION_DMABUF_SYNC?=1
-
-ifeq ($(TARGET_BOARD_PLATFORM), juno)
-GRALLOC_FB_SWAP_RED_BLUE = 0
-GRALLOC_USE_ION_DMA_HEAP = 1
-endif
-
 # When enabled, sets camera capability bit
 GRALLOC_CAMERA_WRITE_RAW16?=1
 

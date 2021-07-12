@@ -506,7 +506,6 @@ int mali_gralloc_ion_sync_start(const private_handle_t * const hnd,
 		{
 			if (dev->use_legacy() == false)
 			{
-#if defined(GRALLOC_USE_ION_DMABUF_SYNC) && (GRALLOC_USE_ION_DMABUF_SYNC == 1)
 				uint64_t flags = DMA_BUF_SYNC_START;
 				if (read)
 				{
@@ -532,7 +531,6 @@ int mali_gralloc_ion_sync_start(const private_handle_t * const hnd,
 					     (uint64_t)DMA_BUF_IOCTL_SYNC, flags, ret, strerror(errno));
 					return -errno;
 				}
-#endif
 			}
 			else
 			{
@@ -582,7 +580,6 @@ int mali_gralloc_ion_sync_end(const private_handle_t * const hnd,
 		{
 			if (dev->use_legacy() == false)
 			{
-#if defined(GRALLOC_USE_ION_DMABUF_SYNC) && (GRALLOC_USE_ION_DMABUF_SYNC == 1)
 				uint64_t flags = DMA_BUF_SYNC_END;
 				if (read)
 				{
@@ -608,7 +605,6 @@ int mali_gralloc_ion_sync_end(const private_handle_t * const hnd,
 					     (uint64_t)DMA_BUF_IOCTL_SYNC, flags, ret, strerror(errno));
 					return -errno;
 				}
-#endif
 			}
 			else
 			{

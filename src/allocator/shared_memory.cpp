@@ -22,6 +22,7 @@
 #if GRALLOC_USE_MEMFD
 #include <sys/syscall.h>
 #include <linux/memfd.h>
+#include <fcntl.h>
 #else
 #include <cutils/ashmem.h>
 #endif
