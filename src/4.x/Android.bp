@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Arm Limited.
+ * Copyright (C) 2020-2021 Arm Limited.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,9 @@
 
 cc_defaults {
 	name: "arm_gralloc_version_defaults",
-	target: {
-		android: {
-			shared_libs: [
-				"android.hardware.graphics.common@1.2",
-			],
-		},
-	},
+	shared_libs: [
+		"android.hardware.graphics.common@1.2",
+	],
 	cflags: [
 		"-DLOG_TAG=\"gralloc4\"",
 		"-DGRALLOC_VERSION_MAJOR=4",
@@ -38,6 +34,7 @@ cc_defaults {
 	defaults: [
 		"arm_gralloc_defaults",
 		"arm_gralloc_version_defaults",
+		"libgralloc_allocator_dependencies",
 	],
 	compile_multilib: "both",
 	relative_install_path: "hw/",
@@ -57,6 +54,7 @@ cc_defaults {
 		"libarect",
 		"libgralloc_core",
 		"libgralloc_allocator",
+		"libgralloc_allocator_shared_memory",
 		"libgralloc_capabilities",
 	],
 	header_libs: [
