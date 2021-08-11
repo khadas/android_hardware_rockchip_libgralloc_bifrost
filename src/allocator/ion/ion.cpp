@@ -622,6 +622,7 @@ int allocator_allocate(const buffer_descriptor_t *descriptor, private_handle_t *
 			          plane_info[i].alloc_height);
 		}
 
+		private_handle_t* hnd= handle;
 		if (((hnd->req_format == 0x30 || hnd->req_format == 0x31 || hnd->req_format == 0x32 ||
 			hnd->req_format == 0x33 || hnd->req_format == 0x34 || hnd->req_format == 0x35) &&
 			hnd->width <= 100 && hnd->height <= 100) ||
@@ -629,12 +630,9 @@ int allocator_allocate(const buffer_descriptor_t *descriptor, private_handle_t *
 		{
 			ALOGE("rk-debug workaround for NativeHareware format = %x producer_usage : 0x%" PRIx64 ", consumer_usage : 0x%" PRIx64,
 					hnd->req_format, hnd->producer_usage, hnd->consumer_usage);
-			close(shared_fd);
-			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-			return -1;
+			ret = -1;
+			goto fail;
 		}
-
-		pHandle[i] = hnd;
 
 		allocator_sync_end(handle, true, true);
 	}
