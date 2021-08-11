@@ -2030,19 +2030,16 @@ static uint64_t rk_gralloc_select_format(const uint64_t req_format,
 uint64_t mali_gralloc_select_format(const uint64_t req_format,
                                     const mali_gralloc_format_type type,
                                     const uint64_t usage,
-                                    const int buffer_size,
-                                    uint64_t * const internal_format)
+                                    const int buffer_size)
 {
-/* < 若 USE_RK_SELECTING_FORMAT_MANNER 为 1, 则将使用 rk 的方式来选择 alloc_format 和 internal_format.> */
+/* < 若 USE_RK_SELECTING_FORMAT_MANNER 为 1, 则将使用 rk 的方式来选择 alloc_format .> */
 #if USE_RK_SELECTING_FORMAT_MANNER
 // #error
 
 	GRALLOC_UNUSED(type);
 	uint64_t alloc_format;
 
-	*internal_format = rk_gralloc_select_format(req_format, usage, buffer_size);
-
-	alloc_format = *internal_format;
+	alloc_format = rk_gralloc_select_format(req_format, usage, buffer_size);
 
 	return alloc_format;
 #else

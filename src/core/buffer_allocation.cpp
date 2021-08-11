@@ -900,8 +900,7 @@ int mali_gralloc_derive_format_and_size(buffer_descriptor_t *descriptor)
 	bufDescriptor->alloc_format = mali_gralloc_select_format(bufDescriptor->hal_format,
 	                                                         bufDescriptor->format_type,
 	                                                         usage,
-	                                                         bufDescriptor->width * bufDescriptor->height,
-	                                                         &bufDescriptor->old_internal_format);
+	                                                         bufDescriptor->width * bufDescriptor->height);
 
 	if(((bufDescriptor->alloc_format == 0x30 || bufDescriptor->alloc_format == 0x31 || bufDescriptor->alloc_format == 0x32 ||
 		bufDescriptor->alloc_format == 0x33 || bufDescriptor->alloc_format == 0x34 || bufDescriptor->alloc_format == 0x35) &&
