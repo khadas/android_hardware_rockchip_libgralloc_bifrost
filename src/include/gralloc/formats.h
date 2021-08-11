@@ -110,6 +110,9 @@ typedef enum
 	MALI_GRALLOC_FORMAT_INTERNAL_Y210,
 	MALI_GRALLOC_FORMAT_INTERNAL_Y410,
 	MALI_GRALLOC_FORMAT_INTERNAL_YU12,
+	MALI_GRALLOC_FORMAT_INTERNAL_YUV444,
+	MALI_GRALLOC_FORMAT_INTERNAL_Q410,
+	MALI_GRALLOC_FORMAT_INTERNAL_Q401,
 
 	/*
 	 * Single-plane (I = interleaved) variants of 8/10-bit YUV formats,
@@ -139,6 +142,8 @@ typedef enum
 /* This format will use AFBC */
 #define MALI_GRALLOC_INTFMT_AFBC_BASIC (1ULL << (MALI_GRALLOC_INTFMT_EXTENSION_BIT_START + 0))
 
+/* This format will use AFRC */
+#define MALI_GRALLOC_INTFMT_AFRC_BASIC (1ULL << (MALI_GRALLOC_INTFMT_EXTENSION_BIT_START + 1))
 
 /* This format will use Block Linear */
 #define MALI_GRALLOC_INTFMT_BLOCK_LINEAR_BASIC (1ULL << (MALI_GRALLOC_INTFMT_EXTENSION_BIT_START + 2))
@@ -178,10 +183,95 @@ typedef enum
  */
 #define MALI_GRALLOC_INTFMT_AFBCENABLE_MASK (uint64_t)(MALI_GRALLOC_INTFMT_AFBC_BASIC)
 
+/*
+ * AFRC modifier bits (valid with MALI_GRALLOC_INTFMT_AFRC_BASIC)
+ */
 
-/* These are legacy Gralloc 0.3 support macros for passing private formats through the 0.3 alloc interface.
- * It packs modifier bits together with base format into a 32 bit format identifier.
- * Gralloc 1.0 interface should use private functions to set private buffer format in the buffer descriptor.
+/* This mask should be used to check or clear support for AFRC for an internal format.
+ */
+#define MALI_GRALLOC_INTFMT_AFRCENABLE_MASK (uint64_t)(MALI_GRALLOC_INTFMT_AFRC_BASIC)
+
+/*
+ * This format uses a memory layout capable of inline rotation.
+ * If this is unspecified, the format will use a scanline access optimized (linear) memory layout instead.
+ * The memory layout is the same for all planes.
+ */
+#define MALI_GRALLOC_INTFMT_AFRC_ROT_LAYOUT (1ULL << (MALI_GRALLOC_INTFMT_EXTENSION_BIT_START + 3))
+
+/* Available options for coding unit size.  */
+#define MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_16 0ULL
+#define MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_24 1ULL
+#define MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_32 2ULL
+#define MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_MASK 3ULL
+#define MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_UNWRAP(size) (16 + 8 * (size))
+
+/*
+ * This format uses 24/32 bytes for the RGBA plane coding unit size.
+ * If this is unspecified, the format will use 16 bytes for the RGBA plane coding unit size.
+ */
+#define MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES_SHIFT (MALI_GRALLOC_INTFMT_EXTENSION_BIT_START + 4)
+#define MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(x) ((x) << (MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES_SHIFT))
+
+/*
+ * This format uses 24/32 bytes for the luminance (Y) plane coding unit size.
+ * If this is unspecified, the format will use 16 bytes for the luminance plane coding unit size.
+ */
+#define MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES_SHIFT MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES_SHIFT
+#define MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES(x) MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(x)
+
+/*
+ * This format uses 24/32 bytes for the coding unit size for the chrominance (U and V) planes.
+ * If this is unspecified, the format will use 16 bytes for the coding unit size for the U and V planes.
+ */
+#define MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES_SHIFT (MALI_GRALLOC_INTFMT_EXTENSION_BIT_START + 6)
+#define MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES(x) ((x) << (MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES_SHIFT))
+
+/*
+ * Bit 8 is unused for AFRC.
+ */
+#define MALI_GRALLOC_INTFMT_RESERVED_BIT_FOR_EXTRA_AFRC_FLAG (1ULL << (MALI_GRALLOC_INTFMT_EXTENSION_BIT_START + 8))
+
+/*
+ * Avoid using us directly; use the helper macros defined below instead.
+ */
+#define GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC(x, modifiers) \
+        mali_gralloc_format_wrapper(x, (MALI_GRALLOC_INTFMT_AFRC_BASIC | modifiers) >> MALI_GRALLOC_INTFMT_EXT_WRAP_SHIFT)
+
+/*
+ * Helper macros for marking/wrapping base formats as AFRC-encoded formats.
+ *
+ * Example usage:
+ *
+ * int private_format = GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC_YUV_ROT(
+ *     HAL_PIXEL_FORMAT_NV12,
+ *     MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_24
+ *     MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_16
+ * );
+ */
+#define GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC_DEFAULT(hal_format) \
+        GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC(hal_format, 0)
+
+#define GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC_RGBA_SCAN(hal_format, afrc_rgba_coding_unit_bytes) \
+        GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC(hal_format, \
+                                            MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(afrc_rgba_coding_unit_bytes))
+
+#define GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC_RGBA_ROT(hal_format, afrc_rgba_coding_unit_bytes) \
+        GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC(hal_format, \
+                                            MALI_GRALLOC_INTFMT_AFRC_ROT_LAYOUT | \
+                                            MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(afrc_rgba_coding_unit_bytes))
+
+#define GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC_YUV_SCAN(hal_format, afrc_luma_coding_unit_bytes, afrc_chroma_coding_unit_bytes) \
+        GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC(hal_format, \
+                                            MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES(afrc_luma_coding_unit_bytes) | \
+                                            MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES(afrc_chroma_coding_unit_bytes))
+
+#define GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC_YUV_ROT(hal_format, afrc_luma_coding_unit_bytes, afrc_chroma_coding_unit_bytes) \
+        GRALLOC_PRIVATE_FORMAT_WRAPPER_AFRC(hal_format, \
+                                            MALI_GRALLOC_INTFMT_AFRC_ROT_LAYOUT | \
+                                            MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES(afrc_luma_coding_unit_bytes) | \
+                                            MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES(afrc_chroma_coding_unit_bytes))
+
+/* These are support macros that packs modifier bits together with base format into a 32 bit format identifier.
  *
  * Packing:
  *
@@ -250,6 +340,10 @@ static inline bool is_format_afbc(uint64_t format)
 	return (format & MALI_GRALLOC_INTFMT_AFBCENABLE_MASK) != 0;
 }
 
+static inline bool is_format_afrc(uint64_t format)
+{
+	return (format & MALI_GRALLOC_INTFMT_AFRCENABLE_MASK) != 0;
+}
 
 static inline bool is_format_block_linear(uint64_t format)
 {
@@ -365,6 +459,8 @@ static inline uint64_t get_modifier_from_gralloc_format(uint64_t format)
 #define MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_YUV_WRITE ((uint64_t)1 << 12)
 #define MALI_GRALLOC_FORMAT_CAPABILITY_AFBC_RGBA16161616 ((uint64_t)1 << 13)
 
+#define MALI_GRALLOC_FORMAT_CAPABILITY_AFRC_ROT_LAYOUT ((uint64_t)1 << 14)
+#define MALI_GRALLOC_FORMAT_CAPABILITY_AFRC_SCAN_LAYOUT ((uint64_t)1 << 15)
 
 #define MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_READ ((uint64_t)1 << 16)
 #define MALI_GRALLOC_FORMAT_CAPABILITY_YUV_BL_8_WRITE ((uint64_t)1 << 17)

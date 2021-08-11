@@ -17,9 +17,7 @@
  */
 #pragma once
 
-#if GRALLOC_VERSION_MAJOR == 2
-#include "2.x/allocator_hidl_header.h"
-#elif GRALLOC_VERSION_MAJOR == 3
+#if GRALLOC_VERSION_MAJOR == 3
 #include "3.x/allocator_hidl_header.h"
 #elif GRALLOC_VERSION_MAJOR == 4
 #include "4.x/allocator_hidl_header.h"
@@ -43,7 +41,7 @@ using android::hardware::hidl_vec;
 /*
  * Allocates buffers with the properties specified by the descriptor
  *
- * @param bufferDescriptor: Specifies the properties of the buffers to allocate.
+ * @param descriptor: Specifies the properties of the buffers to allocate.
  * @param count: Number of buffers to allocate.
  * @param hidl_cb [in] HIDL callback function generating -
  *        error : NONE upon success. Otherwise,
@@ -54,10 +52,8 @@ using android::hardware::hidl_vec;
  *        stride: Number of pixels between two consecutive rows of the
  *                buffers, when the concept of consecutive rows is defined.
  *        buffers: An array of raw handles to the newly allocated buffers
- * @param fb_allocator [in] function to use for allocation of buffers with GRALLOC_USAGE_HW_FB
  */
-void allocate(const buffer_descriptor_t &bufferDescriptor, uint32_t count, IAllocator::allocate_cb hidl_cb,
-              std::function<int(const buffer_descriptor_t *, buffer_handle_t *)> fb_allocator = nullptr);
+void allocate(buffer_descriptor_t *descriptor, uint32_t count, IAllocator::allocate_cb hidl_cb);
 
 } // namespace common
 } // namespace allocator

@@ -646,10 +646,9 @@ void getFromBufferDescriptorInfo(IMapper::BufferDescriptorInfo const &descriptio
 	 * Used to share functionality with the normal metadata get function that can only use the allocated buffer handle
 	 * and does not have the buffer descriptor available. */
 	private_handle_t partial_handle(0, descriptor.size, descriptor.consumer_usage, descriptor.producer_usage, -1,
-	                                descriptor.hal_format, descriptor.old_internal_format, descriptor.alloc_format,
-	                                descriptor.width, descriptor.height, descriptor.pixel_stride,
-	                                descriptor.old_alloc_width, descriptor.old_alloc_height, descriptor.old_byte_stride,
-	                                descriptor.size, descriptor.layer_count, descriptor.plane_info);
+	                                descriptor.hal_format, descriptor.alloc_format, descriptor.width, descriptor.height,
+	                                descriptor.size, descriptor.layer_count, descriptor.plane_info,
+	                                descriptor.pixel_stride);
 	if (android::gralloc4::isStandardMetadataType(metadataType))
 	{
 		android::status_t err = android::OK;

@@ -31,8 +31,8 @@ include $(LOCAL_PATH)/../gralloc.version.mk
 include $(if $(wildcard $(LOCAL_PATH)/Android.$(TARGET_BOARD_PLATFORM).mk), $(LOCAL_PATH)/Android.$(TARGET_BOARD_PLATFORM).mk,)
 
 # Disallow building for unsupported Android versions
-ifeq ($(shell expr $(PLATFORM_SDK_VERSION) \> 27), 0)
-    $(error Gralloc supports only Android P and later versions.)
+ifeq ($(shell expr $(PLATFORM_SDK_VERSION) \> 28), 0)
+    $(error Gralloc supports only Android Q and later versions.)
 endif
 
 PLATFORM_SDK_GREATER_THAN_28 := $(shell expr $(PLATFORM_SDK_VERSION) \> 28)
@@ -74,27 +74,14 @@ GRALLOC_HWC_FORCE_BGRA_8888?=0
 # When enabled, disables AFBC for FB usage when HWC is in use
 GRALLOC_HWC_FB_DISABLE_AFBC?=0
 # Disables the framebuffer HAL device. When a hwc impl is available.
-ifeq ($(PLATFORM_SDK_GREATER_THAN_28), 1)
-    GRALLOC_DISABLE_FRAMEBUFFER_HAL?=1
-    ifneq ($(GRALLOC_DISABLE_FRAMEBUFFER_HAL), 1)
-        $(error Framebuffer HAL unsupported for Android 10 and above)
-    endif
-else
-    GRALLOC_DISABLE_FRAMEBUFFER_HAL?=0
+GRALLOC_DISABLE_FRAMEBUFFER_HAL?=1
+ifneq ($(GRALLOC_DISABLE_FRAMEBUFFER_HAL), 1)
+    $(error Framebuffer HAL unsupported for Android 10 and above)
 endif
 # When enabled, buffers will never be allocated with AFBC
 GRALLOC_ARM_NO_EXTERNAL_AFBC?=0
 # Vsync backend(not used)
 GRALLOC_VSYNC_BACKEND?=default
-
-ifeq ($(PLATFORM_SDK_GREATER_THAN_28), 1)
-    GRALLOC_USE_LEGACY_CALCS_LOCK?=0
-    ifeq ($(GRALLOC_USE_LEGACY_CALCS_LOCK), 1)
-        $(error Legacy calculations are unsupported for Android 10 and above)
-    endif
-else
-    GRALLOC_USE_LEGACY_CALCS_LOCK?=1
-endif
 
 # When enabled, sets camera capability bit
 GRALLOC_CAMERA_WRITE_RAW16?=1
@@ -124,30 +111,13 @@ GRALLOC_SHARED_CFLAGS += -DGRALLOC_FB_SWAP_RED_BLUE=$(GRALLOC_FB_SWAP_RED_BLUE)
 GRALLOC_SHARED_CFLAGS += -DGRALLOC_HWC_FORCE_BGRA_8888=$(GRALLOC_HWC_FORCE_BGRA_8888)
 GRALLOC_SHARED_CFLAGS += -DGRALLOC_HWC_FB_DISABLE_AFBC=$(GRALLOC_HWC_FB_DISABLE_AFBC)
 GRALLOC_SHARED_CFLAGS += -DGRALLOC_LIBRARY_BUILD=1
-GRALLOC_SHARED_CFLAGS += -DGRALLOC_USE_LEGACY_CALCS=$(GRALLOC_USE_LEGACY_CALCS_LOCK)
-GRALLOC_SHARED_CFLAGS += -DGRALLOC_USE_LEGACY_LOCK=$(GRALLOC_USE_LEGACY_CALCS_LOCK)
 GRALLOC_SHARED_CFLAGS += -DGRALLOC_CAMERA_WRITE_RAW16=$(GRALLOC_CAMERA_WRITE_RAW16)
 
 LOCAL_CFLAGS := $(GRALLOC_SHARED_CFLAGS)
 
 LOCAL_SHARED_LIBRARIES := libhardware liblog libcutils libion libsync libutils
 
-ifeq ($(GRALLOC_VERSION_MAJOR), 1)
-    LOCAL_SHARED_LIBRARIES += libGLESv1_CM
-else ifeq ($(GRALLOC_VERSION_MAJOR), 2)
-    LOCAL_SHARED_LIBRARIES += libhidlbase libhidltransport
-    ifeq ($(GRALLOC_MAPPER), 1)
-        LOCAL_SHARED_LIBRARIES += android.hardware.graphics.mapper@2.0
-        ifeq ($(HIDL_MAPPER_VERSION_SCALED), 210)
-            LOCAL_SHARED_LIBRARIES += android.hardware.graphics.mapper@2.1
-        endif
-    else
-        LOCAL_SHARED_LIBRARIES += android.hardware.graphics.allocator@2.0
-        ifeq ($(HIDL_MAPPER_VERSION_SCALED), 210)
-            LOCAL_SHARED_LIBRARIES += android.hardware.graphics.mapper@2.1
-        endif
-    endif
-else ifeq ($(GRALLOC_VERSION_MAJOR), 3)
+ifeq ($(GRALLOC_VERSION_MAJOR), 3)
     LOCAL_SHARED_LIBRARIES += libhidlbase libhidltransport
     ifeq ($(GRALLOC_MAPPER), 1)
         LOCAL_SHARED_LIBRARIES += android.hardware.graphics.mapper@3.0
@@ -164,23 +134,7 @@ LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_PATH_32 := $(TARGET_OUT_VENDOR)/lib
 LOCAL_MODULE_PATH_64 := $(TARGET_OUT_VENDOR)/lib64
-ifeq ($(GRALLOC_VERSION_MAJOR), 1)
-    ifeq ($(TARGET_BOARD_PLATFORM),)
-        LOCAL_MODULE := gralloc.default
-    else
-        LOCAL_MODULE := gralloc.$(TARGET_BOARD_PLATFORM)
-    endif
-else ifeq ($(GRALLOC_VERSION_MAJOR), 2)
-    ifeq ($(GRALLOC_MAPPER), 1)
-        ifeq ($(HIDL_MAPPER_VERSION_SCALED), 200)
-            LOCAL_MODULE := android.hardware.graphics.mapper@2.0-impl-arm
-        else ifeq ($(HIDL_MAPPER_VERSION_SCALED), 210)
-            LOCAL_MODULE := android.hardware.graphics.mapper@2.0-impl-2.1-arm
-        endif
-    else
-        LOCAL_MODULE := android.hardware.graphics.allocator@2.0-impl-arm
-    endif
-else ifeq ($(GRALLOC_VERSION_MAJOR), 3)
+ifeq ($(GRALLOC_VERSION_MAJOR), 3)
     ifeq ($(GRALLOC_MAPPER), 1)
         LOCAL_MODULE := android.hardware.graphics.mapper@3.0-impl-arm
     else
@@ -198,42 +152,7 @@ LOCAL_MULTILIB := both
 LOCAL_GROUP_STATIC_LIBRARIES := true
 LOCAL_STATIC_LIBRARIES += libgralloc_core libgralloc_allocator libgralloc_capabilities
 
-ifeq ($(GRALLOC_VERSION_MAJOR), 1)
-    LOCAL_SRC_FILES += 1.x/module.cpp \
-                       fbdev/framebuffer.cpp \
-                       1.x/framebuffer_device.cpp \
-                       1.x/vsync_${GRALLOC_VSYNC_BACKEND}.cpp \
-                       1.x/public_interface.cpp
-else ifeq ($(GRALLOC_VERSION_MAJOR), 2)
-    ifeq ($(GRALLOC_MAPPER), 1)
-        LOCAL_SRC_FILES += 2.x/mapper.cpp \
-                           hidl_common/mapper.cpp \
-                           hidl_common/registered_handle_pool.cpp
-    else
-        LOCAL_SRC_FILES += 2.x/allocator.cpp \
-                           fbdev/framebuffer.cpp \
-                           hidl_common/allocator.cpp
-    endif
-
-    LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := \
-        android.hardware.graphics.allocator@2.0 \
-        libhidlbase \
-        libhidltransport
-
-    ifeq ($(HIDL_MAPPER_VERSION_SCALED), 200)
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.mapper@2.0
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.common@1.0
-    else ifeq ($(HIDL_MAPPER_VERSION_SCALED), 210)
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.mapper@2.1
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.common@1.1
-    endif
-
-    ifeq ($(HIDL_COMMON_VERSION_SCALED), 100)
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.common@1.0
-    else ifeq ($(HIDL_COMMON_VERSION_SCALED), 110)
-        LOCAL_EXPORT_SHARED_LIBRARY_HEADERS += android.hardware.graphics.common@1.1
-    endif
-else ifeq ($(GRALLOC_VERSION_MAJOR), 3)
+ifeq ($(GRALLOC_VERSION_MAJOR), 3)
     LOCAL_EXPORT_SHARED_LIBRARY_HEADERS := \
         libhidlbase \
         libhidltransport

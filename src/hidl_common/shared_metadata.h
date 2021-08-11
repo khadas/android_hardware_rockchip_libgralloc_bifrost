@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Arm Limited.
+ * Copyright (C) 2020-2021 Arm Limited.
  *
  * Copyright 2016 The Android Open Source Project
  *
@@ -21,7 +21,7 @@
 #include <vector>
 #include "gralloctypes/Gralloc4.h"
 #include "buffer.h"
-#include "allocator/shared_memory.h"
+#include "allocator/shared_memory/shared_memory.h"
 #include "core/buffer_descriptor.h"
 #include "helper_functions.h"
 

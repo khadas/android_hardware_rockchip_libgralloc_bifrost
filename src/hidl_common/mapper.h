@@ -21,9 +21,7 @@
 #include "log.h"
 #include "core/buffer_descriptor.h"
 
-#if GRALLOC_VERSION_MAJOR == 2
-#include "2.x/mapper_hidl_header.h"
-#elif GRALLOC_VERSION_MAJOR == 3
+#if GRALLOC_VERSION_MAJOR == 3
 #include "3.x/mapper_hidl_header.h"
 #elif GRALLOC_VERSION_MAJOR == 4
 #include "4.x/mapper_hidl_header.h"

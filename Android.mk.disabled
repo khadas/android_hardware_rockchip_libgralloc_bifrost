@@ -20,29 +20,15 @@ TOP_LOCAL_PATH := $(call my-dir)
 # Blueprint builds disable Android.mk use
 MALI_GRALLOC_API_TESTS?=0
 
-ifdef GRALLOC_USE_GRALLOC1_API
-    ifdef GRALLOC_API_VERSION
-        $(warning GRALLOC_API_VERSION flag is not compatible with GRALLOC_USE_GRALLOC1_API)
-    endif
-endif
-
 include $(TOP_LOCAL_PATH)/gralloc.version.mk
 
-#Build allocator for version >= 2.x and gralloc libhardware HAL for all previous versions.
+# Build allocator for version 3.x and gralloc libhardware HAL for all previous versions.
 GRALLOC_MAPPER := 0
-ifeq ($(shell expr $(GRALLOC_VERSION_MAJOR) \>= 2), 1)
-    $(info Build Gralloc allocator for $(GRALLOC_API_VERSION))
-else
-    $(info Build Gralloc 1.x libhardware HAL)
-    $(warning Building for unsupported Gralloc version - Gralloc 1.x)
-endif
+include $(TOP_LOCAL_PATH)/src/Android.mk
+# Build mapper
+GRALLOC_MAPPER := 1
 include $(TOP_LOCAL_PATH)/src/Android.mk
 
-ifeq ($(shell expr $(GRALLOC_VERSION_MAJOR) \>= 2), 1)
-   GRALLOC_MAPPER := 1
-   $(info Build Gralloc mapper for $(GRALLOC_API_VERSION))
-   include $(TOP_LOCAL_PATH)/src/Android.mk
-endif
 
 # Build service
 ifeq ($(GRALLOC_VERSION_MAJOR), 3)

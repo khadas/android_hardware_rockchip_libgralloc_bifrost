@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2016-2021 ARM Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -37,6 +37,10 @@ enum class AllocBaseType
 	AFBC_WIDEBLK,      /* 32 x 8 block size */
 	AFBC_EXTRAWIDEBLK, /* 64 x 4 block size */
 
+	/*
+	 * Arm Fixed Rate Compression
+	 */
+	AFRC,
 
 	/* Block Linear */
 	BLOCK_LINEAR,
@@ -82,6 +86,36 @@ struct AllocType
 	 */
 	bool is_frontbuffer_safe{};
 
+	struct
+	{
+		/*
+		 * Coding unit size and alignment requirement (in bytes) of the RGBA or
+		 * luminance (Y) plane
+		 */
+		uint32_t rgba_luma_coding_unit_bytes{};
+		uint32_t rgba_luma_plane_alignment{};
+
+		/*
+		 * Coding unit size and alignment requirement (in bytes) of the
+		 * chrominance (U & V) planes
+		 */
+		uint32_t chroma_coding_unit_bytes{};
+		uint32_t chroma_plane_alignment{};
+
+		/*
+		 * Clump dimensions (in pixels) for each plane (zero for unused planes)
+		 */
+		uint32_t clump_width[3]{0, 0, 0};
+		uint32_t clump_height[3]{0, 0, 0};
+
+		/*
+		 * Paging tile dimensions (in coding units) for the whole buffer
+		 */
+		uint32_t paging_tile_width{};
+		uint32_t paging_tile_height{};
+	}
+	afrc;
+
 	bool is_afbc() const
 	{
 		switch (primary_type)
@@ -95,6 +129,10 @@ struct AllocType
 		}
 	}
 
+	bool is_afrc() const
+	{
+		return primary_type == AllocBaseType::AFRC;
+	}
 
 	bool is_block_linear() const
 	{
@@ -104,12 +142,11 @@ struct AllocType
 
 using alloc_type_t = AllocType;
 
-int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescriptor);
+int mali_gralloc_derive_format_and_size(buffer_descriptor_t *descriptor);
 
-int mali_gralloc_buffer_allocate(const gralloc_buffer_descriptor_t *descriptors,
-                                 uint32_t numDescriptors, buffer_handle_t *pHandle);
+int mali_gralloc_buffer_allocate(buffer_descriptor_t *descriptor, private_handle_t **out_handle);
 
-int mali_gralloc_buffer_free(buffer_handle_t pHandle);
+int mali_gralloc_buffer_free(private_handle_t *handle);
 
 void init_afbc(uint8_t *buf, uint64_t internal_format, const bool is_multi_plane, int w, int h);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2016-2021 ARM Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -21,18 +21,14 @@
 /* For error codes. */
 #include <hardware/gralloc1.h>
 
+#include "gralloc_version.h"
 #include "private_interface_types.h"
 #include "buffer.h"
 #include "gralloc/formats.h"
 #include "usages.h"
-#include "allocator/ion_support.h"
+#include "allocator/allocator.h"
 #include "helper_functions.h"
 #include "format_info.h"
-
-#if GRALLOC_USE_LEGACY_LOCK == 1
-#include "legacy/buffer_access.h"
-#endif
-
 
 enum tx_direction
 {
@@ -65,37 +61,29 @@ static enum tx_direction get_tx_direction(const uint64_t usage)
 	return dir;
 }
 
-static void buffer_sync(private_handle_t * const hnd,
-                        const enum tx_direction direction)
+static void buffer_sync(private_handle_t *hnd, tx_direction direction)
 {
-	if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION)
+	if (direction != TX_NONE)
 	{
-		if (direction != TX_NONE)
-		{
-			hnd->cpu_read = (direction == TX_FROM_DEVICE || direction == TX_BOTH) ? 1 : 0;
-			hnd->cpu_write = (direction == TX_TO_DEVICE || direction == TX_BOTH) ? 1 : 0;
+		hnd->cpu_read = direction == TX_FROM_DEVICE || direction == TX_BOTH;
+		hnd->cpu_write = direction == TX_TO_DEVICE || direction == TX_BOTH;
 
-			const int status = mali_gralloc_ion_sync_start(hnd,
-			                                               hnd->cpu_read ? true : false,
-			                                               hnd->cpu_write ? true : false);
-			if (status < 0)
-			{
-				return;
-			}
-		}
-		else if (hnd->cpu_read || hnd->cpu_write)
+		int status = allocator_sync_start(hnd, hnd->cpu_read, hnd->cpu_write);
+		if (status < 0)
 		{
-			const int status = mali_gralloc_ion_sync_end(hnd,
-			                                             hnd->cpu_read ? true : false,
-			                                             hnd->cpu_write ? true : false);
-			if (status < 0)
-			{
-				return;
-			}
-
-			hnd->cpu_read = 0;
-			hnd->cpu_write = 0;
+			return;
 		}
+	}
+	else if (hnd->cpu_read || hnd->cpu_write)
+	{
+		int status = allocator_sync_end(hnd, hnd->cpu_read, hnd->cpu_write);
+		if (status < 0)
+		{
+			return;
+		}
+
+		hnd->cpu_read = 0;
+		hnd->cpu_write = 0;
 	}
 }
 
@@ -206,11 +194,6 @@ int validate_lock_input_parameters(const buffer_handle_t buffer, const int l,
 int mali_gralloc_lock(buffer_handle_t buffer,
                       uint64_t usage, int l, int t, int w, int h, void **vaddr)
 {
-	/* Legacy support for old buffer size/stride calculations. */
-#if GRALLOC_USE_LEGACY_LOCK == 1
-	return legacy::mali_gralloc_lock(buffer, usage, l, t, w, h, vaddr);
-#endif
-
 	int status;
 
 	if (private_handle_t::validate(buffer) < 0)
@@ -278,11 +261,6 @@ int mali_gralloc_lock_ycbcr(const buffer_handle_t buffer,
                             const uint64_t usage, const int l, const int t,
                             const int w, const int h, android_ycbcr *ycbcr)
 {
-	/* Legacy support for old buffer size/stride calculations. */
-#if GRALLOC_USE_LEGACY_LOCK == 1
-	return legacy::mali_gralloc_lock_ycbcr(buffer, usage, l, t, w, h, ycbcr);
-#endif
-
 	int status;
 
 	if (private_handle_t::validate(buffer) < 0)
@@ -405,11 +383,6 @@ int mali_gralloc_lock_ycbcr(const buffer_handle_t buffer,
  */
 int mali_gralloc_unlock(buffer_handle_t buffer)
 {
-	/* Legacy support for old buffer size/stride calculations. */
-#if GRALLOC_USE_LEGACY_LOCK == 1
-	return legacy::mali_gralloc_unlock(buffer);
-#endif
-
 	if (private_handle_t::validate(buffer) < 0)
 	{
 		MALI_GRALLOC_LOGE("Unlocking invalid buffer %p, returning error", buffer);
@@ -436,11 +409,6 @@ int mali_gralloc_unlock(buffer_handle_t buffer)
 int mali_gralloc_get_num_flex_planes(const buffer_handle_t buffer,
                                      uint32_t * const num_planes)
 {
-	/* Legacy support for old buffer size/stride calculations. */
-#if GRALLOC_USE_LEGACY_LOCK == 1
-	return legacy::mali_gralloc_get_num_flex_planes(buffer, num_planes);
-#endif
-
 	private_handle_t *hnd = (private_handle_t *)buffer;
 	const uint32_t base_format = hnd->alloc_format & MALI_GRALLOC_INTFMT_FMT_MASK;
 
@@ -529,11 +497,6 @@ static void set_flex_plane_params(uint8_t * const top_left,
 int mali_gralloc_lock_flex(const buffer_handle_t buffer, const uint64_t usage, const int l, const int t, const int w,
                            const int h, struct android_flex_layout *const flex_layout)
 {
-	/* Legacy support for old buffer size/stride calculations. */
-#if GRALLOC_USE_LEGACY_LOCK == 1
-	return legacy::mali_gralloc_lock_flex(buffer, usage, l, t, w, h, flex_layout);
-#endif
-
 	private_handle_t * const hnd = (private_handle_t *)buffer;
 	const uint32_t base_format = hnd->alloc_format & MALI_GRALLOC_INTFMT_FMT_MASK;
 

@@ -19,6 +19,7 @@ cc_defaults {
 	name: "arm_gralloc_core_defaults",
 	defaults: [
 		"arm_gralloc_defaults",
+		"arm_gralloc_version_defaults",
 	],
 
 	srcs: [
@@ -26,7 +27,6 @@ cc_defaults {
 		"buffer_allocation.cpp",
 		"formats.cpp",
 		"reference.cpp",
-		"debug.cpp",
 		"format_info.cpp",
 	],
 	static_libs: [

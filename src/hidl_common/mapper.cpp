@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2020-2021 ARM Limited. All rights reserved.
  *
  * Copyright 2016 The Android Open Source Project
  *
@@ -26,7 +26,7 @@
 #include "core/buffer_access.h"
 #include "core/reference.h"
 #include "core/format_info.h"
-#include "allocator/ion_support.h"
+#include "allocator/allocator.h"
 #include "buffer.h"
 #include "log.h"
 #include "gralloc/attributes.h"
@@ -187,7 +187,7 @@ static Error lockBuffer(buffer_handle_t bufferHandle,
 		return Error::BAD_BUFFER;
 	}
 
-	auto private_handle = private_handle_t::dynamicCast(bufferHandle);
+	auto private_handle = private_handle_t::downcast(bufferHandle);
 	if (private_handle->cpu_write != 0 && (cpuUsage & BufferUsage::CPU_WRITE_MASK)
 	    && private_handle->req_format != MALI_GRALLOC_FORMAT_INTERNAL_BLOB)
 	{
@@ -206,7 +206,7 @@ static Error lockBuffer(buffer_handle_t bufferHandle,
 		close(fenceFd);
 	}
 	if (mali_gralloc_lock(bufferHandle, cpuUsage, accessRegion.left, accessRegion.top, accessRegion.width,
-	                      accessRegion.height, &data) < 0)
+	                      accessRegion.height, &data) != 0)
 	{
 		return Error::BAD_VALUE;
 	}
@@ -234,7 +234,7 @@ static Error unlockBuffer(buffer_handle_t bufferHandle,
 		return Error::BAD_BUFFER;
 	}
 
-	auto private_handle = private_handle_t::dynamicCast(bufferHandle);
+	auto private_handle = private_handle_t::downcast(bufferHandle);
 	if (!private_handle->cpu_write && !private_handle->cpu_read)
 	{
 		MALI_GRALLOC_LOGE("Attempt to call unlock*() on an unlocked buffer (%p)", bufferHandle);
@@ -586,13 +586,6 @@ Error validateBufferSize(void* buffer,
 		return Error::BAD_VALUE;
 	}
 
-	if (gralloc_buffer->internal_format != grallocDescriptor.old_internal_format)
-	{
-		MALI_GRALLOC_LOGE("Buffer internal format :0x%" PRIx64" does not match descriptor (derived) internal format :0x%"
-		      PRIx64, gralloc_buffer->internal_format, grallocDescriptor.old_internal_format);
-		return Error::BAD_VALUE;
-	}
-
 	if (gralloc_buffer->alloc_format != grallocDescriptor.alloc_format)
 	{
 		MALI_GRALLOC_LOGE("Buffer alloc format :0x%" PRIx64" does not match descriptor (derived) alloc format :0x%"
@@ -730,7 +723,7 @@ void flushLockedBuffer(void *buffer, IMapper::flushLockedBuffer_cb hidl_cb)
 		return;
 	}
 
-	mali_gralloc_ion_sync_end(private_handle, false, true);
+	allocator_sync_end(private_handle, false, true);
 	hidl_cb(Error::NONE, hidl_handle{});
 }
 
@@ -750,7 +743,7 @@ Error rereadLockedBuffer(void *buffer)
 		return Error::BAD_BUFFER;
 	}
 
-	mali_gralloc_ion_sync_start(private_handle, true, false);
+	allocator_sync_start(private_handle, true, false);
 	return Error::NONE;
 }
 

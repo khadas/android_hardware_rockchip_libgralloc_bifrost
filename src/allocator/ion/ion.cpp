@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2016-2021 ARM Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -41,12 +41,11 @@
 #include "private_interface_types.h"
 #include "buffer.h"
 #include "helper_functions.h"
-#include "1.x/framebuffer_device.h"
 #include "gralloc/formats.h"
 #include "usages.h"
 #include "core/buffer_descriptor.h"
 #include "core/buffer_allocation.h"
-#include "ion_support.h"
+#include "allocator/allocator.h"
 
 #define INIT_ZERO(obj) (memset(&(obj), 0, sizeof((obj))))
 
@@ -373,25 +372,6 @@ enum ion_heap_type ion_device::pick_ion_heap(uint64_t usage)
 	return heap_type;
 }
 
-static int get_max_buffer_descriptor_index(const gralloc_buffer_descriptor_t *descriptors, uint32_t numDescriptors)
-{
-	uint32_t i, max_buffer_index = 0;
-	size_t max_buffer_size = 0;
-
-	for (i = 0; i < numDescriptors; i++)
-	{
-		buffer_descriptor_t *bufDescriptor = (buffer_descriptor_t *)descriptors[i];
-
-		if (max_buffer_size < bufDescriptor->size)
-		{
-			max_buffer_index = i;
-			max_buffer_size = bufDescriptor->size;
-		}
-	}
-
-	return max_buffer_index;
-}
-
 int ion_device::open_and_query_ion()
 {
 	int ret = -1;
@@ -470,262 +450,176 @@ int ion_device::open_and_query_ion()
 	return 0;
 }
 
-
-/*
- * Signal start of CPU access to the DMABUF exported from ION.
- *
- * @param hnd   [in]    Buffer handle
- * @param read  [in]    Flag indicating CPU read access to memory
- * @param write [in]    Flag indicating CPU write access to memory
- *
- * @return              0 in case of success
- *                      errno for all error cases
- */
-int mali_gralloc_ion_sync_start(const private_handle_t * const hnd,
-                                const bool read,
-                                const bool write)
+static int call_dma_buf_sync_ioctl(int fd, uint64_t operation, bool read, bool write)
 {
-	if (hnd == NULL)
-	{
-		return -EINVAL;
-	}
-
 	ion_device *dev = ion_device::get();
-	if (!dev)
+	if (dev == nullptr)
 	{
 		return -ENODEV;
 	}
 
-	GRALLOC_UNUSED(read);
-	GRALLOC_UNUSED(write);
-
-	switch (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION)
+	if (dev->use_legacy())
 	{
-	case private_handle_t::PRIV_FLAGS_USES_ION:
-		if (!(hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION_DMA_HEAP))
+		ion_sync_fd(dev->client(), fd);
+	}
+	else
+	{
+		/* Either DMA_BUF_SYNC_START or DMA_BUF_SYNC_END. */
+		dma_buf_sync sync_args = { operation };
+
+		if (read)
 		{
-			if (dev->use_legacy() == false)
-			{
-				uint64_t flags = DMA_BUF_SYNC_START;
-				if (read)
-				{
-					flags |= DMA_BUF_SYNC_READ;
-				}
-				if (write)
-				{
-					flags |= DMA_BUF_SYNC_WRITE;
-				}
-
-				const struct dma_buf_sync payload = { flags };
-
-				int ret, retry = 5;
-				do
-				{
-					ret = ioctl(hnd->share_fd, DMA_BUF_IOCTL_SYNC, &payload);
-					retry--;
-				} while ((ret == -EAGAIN || ret == -EINTR) && retry);
-
-				if (ret < 0)
-				{
-					MALI_GRALLOC_LOGE("ioctl: 0x%" PRIx64 ", flags: 0x%" PRIx64 "failed with code %d: %s",
-					     (uint64_t)DMA_BUF_IOCTL_SYNC, flags, ret, strerror(errno));
-					return -errno;
-				}
-			}
-			else
-			{
-				ion_sync_fd(dev->client(), hnd->share_fd);
-			}
+			sync_args.flags |= DMA_BUF_SYNC_READ;
 		}
 
-		break;
+		if (write)
+		{
+			sync_args.flags |= DMA_BUF_SYNC_WRITE;
+		}
+
+		int ret, retry = 5;
+		do
+		{
+			ret = ioctl(fd, DMA_BUF_IOCTL_SYNC, &sync_args);
+			retry--;
+		} while ((ret == -EAGAIN || ret == -EINTR) && retry);
+
+		if (ret < 0)
+		{
+			MALI_GRALLOC_LOGE("ioctl: %#" PRIx64 ", flags: %#" PRIx64 "failed with code %d: %s",
+			     (uint64_t)DMA_BUF_IOCTL_SYNC, (uint64_t)sync_args.flags, ret, strerror(errno));
+			return -errno;
+		}
 	}
 
 	return 0;
 }
 
-
-/*
- * Signal end of CPU access to the DMABUF exported from ION.
- *
- * @param hnd   [in]    Buffer handle
- * @param read  [in]    Flag indicating CPU read access to memory
- * @param write [in]    Flag indicating CPU write access to memory
- *
- * @return              0 in case of success
- *                      errno for all error cases
- */
-int mali_gralloc_ion_sync_end(const private_handle_t * const hnd,
-                              const bool read,
-                              const bool write)
+int allocator_sync_start(const private_handle_t *handle, bool read, bool write)
 {
-	if (hnd == NULL)
+	if (handle == nullptr)
 	{
 		return -EINVAL;
 	}
 
-	ion_device *dev = ion_device::get();
-	if (!dev)
-	{
-		return -ENODEV;
-	}
-
-	GRALLOC_UNUSED(read);
-	GRALLOC_UNUSED(write);
-
-	switch (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION)
-	{
-	case private_handle_t::PRIV_FLAGS_USES_ION:
-		if (!(hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION_DMA_HEAP))
-		{
-			if (dev->use_legacy() == false)
-			{
-				uint64_t flags = DMA_BUF_SYNC_END;
-				if (read)
-				{
-					flags |= DMA_BUF_SYNC_READ;
-				}
-				if (write)
-				{
-					flags |= DMA_BUF_SYNC_WRITE;
-				}
-
-				const struct dma_buf_sync payload = { flags };
-
-				int ret, retry = 5;
-				do
-				{
-					ret = ioctl(hnd->share_fd, DMA_BUF_IOCTL_SYNC, &payload);
-					retry--;
-				} while ((ret == -EAGAIN || ret == -EINTR) && retry);
-
-				if (ret < 0)
-				{
-					MALI_GRALLOC_LOGE("ioctl: 0x%" PRIx64 ", flags: 0x%" PRIx64 "failed with code %d: %s",
-					     (uint64_t)DMA_BUF_IOCTL_SYNC, flags, ret, strerror(errno));
-					return -errno;
-				}
-			}
-			else
-			{
-				ion_sync_fd(dev->client(), hnd->share_fd);
-			}
-		}
-		break;
-	}
-
-	return 0;
+	return call_dma_buf_sync_ioctl(handle->share_fd, DMA_BUF_SYNC_START, read, write);
 }
 
-
-void mali_gralloc_ion_free(private_handle_t * const hnd)
+int allocator_sync_end(const private_handle_t *handle, bool read, bool write)
 {
-	if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)
+	if (handle == nullptr)
+	{
+		return -EINVAL;
+	}
+
+	return call_dma_buf_sync_ioctl(handle->share_fd, DMA_BUF_SYNC_END, read, write);
+}
+
+void allocator_free(private_handle_t *handle)
+{
+	if (handle == nullptr)
 	{
 		return;
 	}
-	else if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION)
-	{
-		/* Buffer might be unregistered already so we need to assure we have a valid handle */
-		if (hnd->base != 0)
-		{
-			if (munmap((void *)hnd->base, hnd->size) != 0)
-			{
-				MALI_GRALLOC_LOGE("Failed to munmap handle %p", hnd);
-			}
-		}
 
-		close(hnd->share_fd);
-		hnd->share_fd = -1;
-	}
-}
-
-static void mali_gralloc_ion_free_internal(buffer_handle_t * const pHandle,
-                                           const uint32_t num_hnds)
-{
-	for (uint32_t i = 0; i < num_hnds; i++)
+	/* Buffer might be unregistered already so we need to assure we have a valid handle */
+	if (handle->base != 0)
 	{
-		if (pHandle[i] != NULL)
+		if (munmap(handle->base, handle->size) != 0)
 		{
-			private_handle_t * const hnd = (private_handle_t * const)pHandle[i];
-			mali_gralloc_ion_free(hnd);
+			MALI_GRALLOC_LOGE("Failed to munmap handle %p", handle);
 		}
 	}
+
+	close(handle->share_fd);
+	handle->share_fd = -1;
 }
 
-
-/*
- *  Allocates ION buffers
- *
- * @param descriptors     [in]    Buffer request descriptors
- * @param numDescriptors  [in]    Number of descriptors
- * @param pHandle         [out]   Handle for each allocated buffer
- *
- * @return File handle which can be used for allocation, on success
- *         -1, otherwise.
- */
-int mali_gralloc_ion_allocate(const gralloc_buffer_descriptor_t *descriptors,
-                              uint32_t numDescriptors, buffer_handle_t *pHandle)
+int allocator_allocate(const buffer_descriptor_t *descriptor, private_handle_t **out_handle)
 {
-	static int support_protected = 1;
 	unsigned int priv_heap_flag = 0;
 	enum ion_heap_type heap_type;
-	unsigned char *cpu_ptr = NULL;
 	uint64_t usage;
-	uint32_t i, max_buffer_index = 0;
-	int shared_fd;
+	uint32_t max_buffer_index = 0;
+	int shared_fd = -1;
 	unsigned int ion_flags = 0;
 	int min_pgsz = 0;
+	private_handle_t *handle = nullptr;
+	int ret = 0;
 
 	ion_device *dev = ion_device::get();
 	if (!dev)
 	{
-		return -1;
+		MALI_GRALLOC_LOGE("Failed to obtain ion device");
+		ret = -ENODEV;
+		goto fail;
 	}
 
-	for (i = 0; i < numDescriptors; i++)
+	usage = descriptor->consumer_usage | descriptor->producer_usage;
+	heap_type = dev->pick_ion_heap(usage);
+	if (heap_type == ION_HEAP_TYPE_INVALID)
 	{
-		buffer_descriptor_t *bufDescriptor = (buffer_descriptor_t *)(descriptors[i]);
-		usage = bufDescriptor->consumer_usage | bufDescriptor->producer_usage;
+		MALI_GRALLOC_LOGE("Failed to find an appropriate ion heap");
+		ret = -ENOMEM;
+		goto fail;
+	}
 
-		heap_type = dev->pick_ion_heap(usage);
-		if (heap_type == ION_HEAP_TYPE_INVALID)
+	set_ion_flags(heap_type, usage, &priv_heap_flag, &ion_flags);
+
+	shared_fd = dev->alloc_from_ion_heap(usage, descriptor->size, heap_type, ion_flags, &min_pgsz);
+	if (shared_fd < 0)
+	{
+		MALI_GRALLOC_LOGE("ion_alloc failed from client with pid %d", dev->client());
+		ret = -ENOMEM;
+		goto fail;
+	}
+
+	handle = make_private_handle(
+	    priv_heap_flag, descriptor->size, descriptor->consumer_usage,
+	    descriptor->producer_usage, shared_fd, descriptor->hal_format, descriptor->alloc_format,
+	    descriptor->width, descriptor->height, descriptor->size, descriptor->layer_count,
+	    descriptor->plane_info, descriptor->pixel_stride);
+	if (nullptr == handle)
+	{
+		MALI_GRALLOC_LOGE("Private handle could not be created for descriptor");
+		ret = -ENOMEM;
+		goto fail;
+	}
+	else
+	{
+		/* Ownership transferred to handle. */
+		shared_fd = -1;
+	}
+
+	if (usage & GRALLOC_USAGE_PROTECTED)
+	{
+		goto success;
+	}
+
+	ret = allocator_map(handle);
+	if (ret != 0)
+	{
+		MALI_GRALLOC_LOGE("mmap failed from client ( %d ), fd ( %d )", dev->client(), handle->share_fd);
+		goto fail;
+	}
+
+#ifndef GRALLOC_INIT_AFBC
+#define GRALLOC_INIT_AFBC 0
+#endif
+	if (GRALLOC_INIT_AFBC && is_format_afbc(descriptor->alloc_format))
+	{
+		allocator_sync_start(handle, true, true);
+
+		/* For separated plane YUV, there is a header to initialise per plane. */
+		const plane_info_t *plane_info = descriptor->plane_info;
+		const bool is_multi_plane = handle->is_multi_plane();
+		for (int i = 0; i < MAX_PLANES && (i == 0 || plane_info[i].byte_stride != 0); i++)
 		{
-			MALI_GRALLOC_LOGE("Failed to find an appropriate ion heap");
-			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-			return -1;
-		}
-
-		set_ion_flags(heap_type, usage, &priv_heap_flag, &ion_flags);
-
-		shared_fd = dev->alloc_from_ion_heap(usage, bufDescriptor->size, heap_type, ion_flags, &min_pgsz);
-
-		if (shared_fd < 0)
-		{
-			MALI_GRALLOC_LOGE("ion_alloc failed from client ( %d )", dev->client());
-
-			/* need to free already allocated memory. not just this one */
-			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-
-			return -1;
-		}
-
-		private_handle_t *hnd = make_private_handle(
-		    private_handle_t::PRIV_FLAGS_USES_ION | priv_heap_flag, bufDescriptor->size,
-		    bufDescriptor->consumer_usage, bufDescriptor->producer_usage, shared_fd, bufDescriptor->hal_format,
-		    bufDescriptor->old_internal_format, bufDescriptor->alloc_format,
-		    bufDescriptor->width, bufDescriptor->height, bufDescriptor->pixel_stride,
-		    bufDescriptor->old_alloc_width, bufDescriptor->old_alloc_height, bufDescriptor->old_byte_stride,
-		    bufDescriptor->size, bufDescriptor->layer_count, bufDescriptor->plane_info);
-
-		if (NULL == hnd)
-		{
-			MALI_GRALLOC_LOGE("Private handle could not be created for descriptor:%d in non-shared usecase", i);
-
-			/* Close the obtained shared file descriptor for the current handle */
-			close(shared_fd);
-			mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-			return -1;
+			init_afbc(static_cast<uint8_t *>(handle->base) + plane_info[i].offset,
+			          descriptor->alloc_format,
+			          is_multi_plane,
+			          plane_info[i].alloc_width,
+			          plane_info[i].alloc_height);
 		}
 
 		if (((hnd->req_format == 0x30 || hnd->req_format == 0x31 || hnd->req_format == 0x32 ||
@@ -741,121 +635,71 @@ int mali_gralloc_ion_allocate(const gralloc_buffer_descriptor_t *descriptors,
 		}
 
 		pHandle[i] = hnd;
-	}
 
-	for (i = 0; i < numDescriptors; i++)
+		allocator_sync_end(handle, true, true);
+	}
+success:
+	*out_handle = handle;
+	return 0;
+fail:
+	if (shared_fd != -1)
 	{
-		buffer_descriptor_t *bufDescriptor = (buffer_descriptor_t *)(descriptors[i]);
-		private_handle_t *hnd = (private_handle_t *)(pHandle[i]);
-
-		usage = bufDescriptor->consumer_usage | bufDescriptor->producer_usage;
-
-		if (!(usage & GRALLOC_USAGE_PROTECTED))
-		{
-			cpu_ptr =
-			    (unsigned char *)mmap(NULL, bufDescriptor->size, PROT_READ | PROT_WRITE, MAP_SHARED, hnd->share_fd, 0);
-
-			if (MAP_FAILED == cpu_ptr)
-			{
-				MALI_GRALLOC_LOGE("mmap failed from client ( %d ), fd ( %d )", dev->client(), hnd->share_fd);
-				mali_gralloc_ion_free_internal(pHandle, numDescriptors);
-				return -1;
-			}
-
-#if defined(GRALLOC_INIT_AFBC) && (GRALLOC_INIT_AFBC == 1)
-			if (is_format_afbc(bufDescriptor->alloc_format))
-			{
-				mali_gralloc_ion_sync_start(hnd, true, true);
-
-				/* For separated plane YUV, there is a header to initialise per plane. */
-				const plane_info_t *plane_info = bufDescriptor->plane_info;
-				const bool is_multi_plane = hnd->is_multi_plane();
-				for (int i = 0; i < MAX_PLANES && (i == 0 || plane_info[i].byte_stride != 0); i++)
-				{
-#if GRALLOC_USE_LEGACY_CALCS == 1
-					if (i == 0)
-					{
-						uint32_t w = GRALLOC_MAX((uint32_t)bufDescriptor->old_alloc_width, plane_info[0].alloc_width);
-						uint32_t h = GRALLOC_MAX((uint32_t)bufDescriptor->old_alloc_height, plane_info[0].alloc_height);
-
-						init_afbc(cpu_ptr,
-						          bufDescriptor->old_internal_format,
-						          is_multi_plane,
-						          w,
-						          h);
-					}
-					else
-#endif
-					{
-						init_afbc(cpu_ptr + plane_info[i].offset,
-						          bufDescriptor->alloc_format,
-						          is_multi_plane,
-						          plane_info[i].alloc_width,
-						          plane_info[i].alloc_height);
-					}
-				}
-
-				mali_gralloc_ion_sync_end(hnd, true, true);
-			}
-#endif
-			hnd->base = cpu_ptr;
-		}
+		close(shared_fd);
 	}
+
+	if (handle != nullptr)
+	{
+		allocator_free(handle);
+		native_handle_delete(handle);
+	}
+
+	return ret;
+}
+
+int allocator_map(private_handle_t *handle)
+{
+	if (handle == nullptr)
+	{
+		return -EINVAL;
+	}
+
+	void *hint = nullptr;
+	int protection = PROT_READ | PROT_WRITE;
+	int flags = MAP_SHARED;
+	off_t page_offset = 0;
+	void *mapping = mmap(hint, handle->size, protection, flags, handle->share_fd, page_offset);
+	if (MAP_FAILED == mapping)
+	{
+		MALI_GRALLOC_LOGE("mmap(share_fd = %d) failed: %s", handle->share_fd, strerror(errno));
+		return -errno;
+	}
+
+	handle->base = static_cast<std::byte *>(mapping) + handle->offset;
 
 	return 0;
 }
 
-
-int mali_gralloc_ion_map(private_handle_t *hnd)
+void allocator_unmap(private_handle_t *handle)
 {
-	int retval = -EINVAL;
-
-	switch (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION)
+	if (handle == nullptr)
 	{
-	case private_handle_t::PRIV_FLAGS_USES_ION:
-		size_t size = hnd->size;
-
-		unsigned char *mappedAddress = (unsigned char *)mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, hnd->share_fd, 0);
-
-		if (MAP_FAILED == mappedAddress)
-		{
-			MALI_GRALLOC_LOGE("mmap( share_fd:%d ) failed with %s", hnd->share_fd, strerror(errno));
-			retval = -errno;
-			break;
-		}
-
-		hnd->base = (void *)(uintptr_t(mappedAddress) + hnd->offset);
-		retval = 0;
-		break;
+		return;
 	}
 
-	return retval;
-}
-
-void mali_gralloc_ion_unmap(private_handle_t *hnd)
-{
-	switch (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION)
+	void *base = static_cast<std::byte *>(handle->base) - handle->offset;
+	if (munmap(base, handle->size) < 0)
 	{
-	case private_handle_t::PRIV_FLAGS_USES_ION:
-		void *base = (void *)(uintptr_t(hnd->base) - hnd->offset);
-		size_t size = hnd->size;
-
-		if (munmap(base, size) < 0)
-		{
-			MALI_GRALLOC_LOGE("Could not munmap base:%p size:%zd '%s'", base, size, strerror(errno));
-		}
-		else
-		{
-			hnd->base = 0;
-			hnd->cpu_read = 0;
-			hnd->cpu_write = 0;
-		}
-
-		break;
+		MALI_GRALLOC_LOGE("Could not munmap base:%p size:%d '%s'", base, handle->size, strerror(errno));
+	}
+	else
+	{
+		handle->base = 0;
+		handle->cpu_read = 0;
+		handle->cpu_write = 0;
 	}
 }
 
-void mali_gralloc_ion_close(void)
+void allocator_close(void)
 {
 	ion_device::close();
 }

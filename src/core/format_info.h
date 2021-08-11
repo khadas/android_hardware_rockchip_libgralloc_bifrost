@@ -30,6 +30,8 @@ typedef uint8_t format_support_flags;
 /* Base format supports AFBC with different swizzle */
 #define F_AFBC_SWIZ ((uint8_t)1 << 2)
 
+/* Base format supports AFRC */
+#define F_AFRC ((uint8_t)1 << 3)
 
 #define F_BL_YUV ((uint8_t)1 << 4)
 
@@ -68,6 +70,7 @@ typedef struct
 	bool yuv_transform;             /* Supports AFBC YUV transform: 3+ channel RGB (strict R-G-B-? order) with less than 12-bit per sample. */
 	bool flex;                      /* Linear version of format can be represented as flex. */
 	bool block_linear;              /* Format supports 16x16 Block Linear layout */
+	bool afrc;                      /* AFRC supported (per specification and by gralloc). IP support not considered. */
 
 	/* Computes the total number of components in the format. */
 	int total_components() const

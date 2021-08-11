@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Arm Limited. All rights reserved.
+ * Copyright (C) 2020-2021 Arm Limited. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #include "allocator.h"
 #include "hidl_common/descriptor.h"
 #include "hidl_common/allocator.h"
-#include "allocator/ion_support.h"
+#include "allocator/allocator.h"
 
 namespace arm
 {
@@ -37,7 +37,7 @@ GrallocAllocator::GrallocAllocator()
 
 GrallocAllocator::~GrallocAllocator()
 {
-	mali_gralloc_ion_close();
+	allocator_close();
 }
 
 Return<void> GrallocAllocator::allocate(const BufferDescriptor &descriptor, uint32_t count, allocate_cb hidl_cb)
@@ -48,7 +48,7 @@ Return<void> GrallocAllocator::allocate(const BufferDescriptor &descriptor, uint
 		hidl_cb(Error::BAD_DESCRIPTOR, 0, hidl_vec<hidl_handle>());
 		return Void();
 	}
-	common::allocate(bufferDescriptor, count, hidl_cb);
+	common::allocate(&bufferDescriptor, count, hidl_cb);
 	return Void();
 }
 

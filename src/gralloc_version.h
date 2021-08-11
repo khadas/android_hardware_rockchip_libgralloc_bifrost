@@ -32,15 +32,10 @@
  * which is supported for all versions.
  */
 #ifndef GRALLOC_VERSION_MAJOR
-#define GRALLOC_VERSION_MAJOR 1
+#error "GRALLOC_VERSION_MAJOR must be defined."
 #endif
 
-#if GRALLOC_VERSION_MAJOR == 2
-    /* Allocator = 2.0, Mapper = 2.1 and Common = 1.1 */
-    #define HIDL_ALLOCATOR_VERSION_SCALED 200
-    #define HIDL_MAPPER_VERSION_SCALED 210
-    #define HIDL_COMMON_VERSION_SCALED 110
-#elif GRALLOC_VERSION_MAJOR == 3
+#if  GRALLOC_VERSION_MAJOR == 3
     /* Allocator = 3.0, Mapper = 3.0 and Common = 1.2 */
     #define HIDL_ALLOCATOR_VERSION_SCALED 300
     #define HIDL_MAPPER_VERSION_SCALED 300
@@ -52,12 +47,8 @@
     #define HIDL_COMMON_VERSION_SCALED 120
 #endif
 
-#if (GRALLOC_VERSION_MAJOR != 4) &&(GRALLOC_VERSION_MAJOR != 3) && (GRALLOC_VERSION_MAJOR != 2) && (GRALLOC_VERSION_MAJOR != 1)
+#if (GRALLOC_VERSION_MAJOR != 4) &&(GRALLOC_VERSION_MAJOR != 3)
     #error " Gralloc version $(GRALLOC_VERSION_MAJOR) is not supported"
-#endif
-
-#if GRALLOC_VERSION_MAJOR == 1
-#include <hardware/gralloc1.h>
 #endif
 
 #include "gralloc/formats.h"

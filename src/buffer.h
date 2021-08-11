@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2017-2021 ARM Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -132,10 +132,8 @@ struct private_handle_t
 	/* Never intended to be used from C code */
 	enum
 	{
-		PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
-		PRIV_FLAGS_USES_ION_COMPOUND_HEAP = 0x00000002,
-		PRIV_FLAGS_USES_ION = 0x00000004,
-		PRIV_FLAGS_USES_ION_DMA_HEAP = 0x00000008
+		PRIV_FLAGS_USES_ION_COMPOUND_HEAP = 1 << 2,
+		PRIV_FLAGS_USES_ION_DMA_HEAP = 1 << 3,
 	};
 
 	enum
@@ -172,26 +170,8 @@ struct private_handle_t
 	uint64_t producer_usage DEFAULT_INITIALIZER(0);
 	uint64_t consumer_usage DEFAULT_INITIALIZER(0);
 
-	/*
-	 * DEPRECATED members.
-	 * Equivalent information can be obtained from other fields:
-	 *
-	 * - 'internal_format' --> alloc_format
-	 * - 'stride' (pixel stride) ~= plane_info[0].alloc_width
-	 * - 'byte_stride' ~= plane_info[0].byte_stride
-	 * - 'internalWidth' ~= plane_info[0].alloc_width
-	 * - 'internalHeight' ~= plane_info[0].alloc_height
-	 *
-	 * '~=' (approximately equal) is used because the fields were either previously
-	 * incorrectly populated by gralloc or the meaning has slightly changed.
-	 *
-	 * NOTE: 'stride' values sometimes vary significantly from plane_info[0].alloc_width.
-	 */
-	uint64_t internal_format DEFAULT_INITIALIZER(0);
+	/* DEPRECATED. Kept for valiation purposes */
 	int stride DEFAULT_INITIALIZER(0);
-	int byte_stride DEFAULT_INITIALIZER(0);
-	int internalWidth DEFAULT_INITIALIZER(0);
-	int internalHeight DEFAULT_INITIALIZER(0);
 
 	/*
 	 * Allocation properties.
@@ -289,10 +269,9 @@ struct private_handle_t
 		plane_info[0].alloc_height = _height;
 	}
 
-	private_handle_t(int _flags, int _size, uint64_t _consumer_usage, uint64_t _producer_usage,
-	                 int _shared_fd, int _req_format, uint64_t _internal_format, uint64_t _alloc_format, int _width,
-	                 int _height, int _stride, int _internal_width, int _internal_height, int _byte_stride,
-	                 int _backing_store_size, uint64_t _layer_count, plane_info_t _plane_info[MAX_PLANES])
+	private_handle_t(int _flags, int _size, uint64_t _consumer_usage, uint64_t _producer_usage, int _shared_fd,
+	                 int _req_format, uint64_t _alloc_format, int _width, int _height, int _backing_store_size,
+	                 uint64_t _layer_count, const plane_info_t *_plane_info, int _stride)
 	    : share_fd(_shared_fd)
 	    , flags(_flags)
 	    , width(_width)
@@ -300,11 +279,7 @@ struct private_handle_t
 	    , req_format(_req_format)
 	    , producer_usage(_producer_usage)
 	    , consumer_usage(_consumer_usage)
-	    , internal_format(_internal_format)
 	    , stride(_stride)
-	    , byte_stride(_byte_stride)
-	    , internalWidth(_internal_width)
-	    , internalHeight(_internal_height)
 	    , alloc_format(_alloc_format)
 	    , size(_size)
 	    , layer_count(_layer_count)
@@ -321,11 +296,6 @@ struct private_handle_t
 	~private_handle_t()
 	{
 		magic = 0;
-	}
-
-	bool usesPhysicallyContiguousMemory()
-	{
-		return (flags & PRIV_FLAGS_FRAMEBUFFER) ? true : false;
 	}
 
 	static int validate(const native_handle *h)
@@ -345,14 +315,14 @@ struct private_handle_t
 		return (plane_info[1].alloc_width != 0);
 	}
 
-	static private_handle_t *dynamicCast(const native_handle *in)
+	static private_handle_t *downcast(const native_handle *in)
 	{
 		if (validate(in) == 0)
 		{
 			return (private_handle_t *)in;
 		}
 
-		return NULL;
+		return nullptr;
 	}
 #endif
 };
@@ -362,11 +332,11 @@ struct private_handle_t
 #endif
 
 #ifdef __cplusplus
-static inline private_handle_t *make_private_handle(
-    int flags, int size, uint64_t consumer_usage, uint64_t producer_usage,
-    int shared_fd, int required_format, uint64_t internal_format, uint64_t allocated_format,
-    int width, int height, int stride, int internal_width, int internal_height, int byte_stride,
-    int backing_store_size, uint64_t layer_count, plane_info_t *plane_info)
+static inline private_handle_t *make_private_handle(int flags, int size, uint64_t consumer_usage,
+                                                    uint64_t producer_usage, int shared_fd, int required_format,
+                                                    uint64_t allocated_format, int width, int height,
+                                                    int backing_store_size, uint64_t layer_count,
+                                                    const plane_info_t *plane_info, int stride)
 {
 	void *mem = native_handle_create(GRALLOC_ARM_NUM_FDS, NUM_INTS_IN_PRIVATE_HANDLE);
 	if (mem == nullptr)
@@ -375,9 +345,8 @@ static inline private_handle_t *make_private_handle(
 		return nullptr;
 	}
 
-	return new(mem) private_handle_t(flags, size, consumer_usage, producer_usage,
-	                                 shared_fd, required_format, internal_format, allocated_format,
-	                                 width, height, stride, internal_width, internal_height, byte_stride,
-	                                 backing_store_size, layer_count, plane_info);
+	return new (mem)
+	    private_handle_t(flags, size, consumer_usage, producer_usage, shared_fd, required_format, allocated_format,
+	                     width, height, backing_store_size, layer_count, plane_info, stride);
 }
 #endif

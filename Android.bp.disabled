@@ -50,8 +50,6 @@ arm_gralloc_cc_defaults {
 		"-Werror",
 		"-DGRALLOC_LIBRARY_BUILD=1",
 		"-DDISABLE_FRAMEBUFFER_HAL=1",
-		"-DGRALLOC_USE_LEGACY_CALCS=0",
-		"-DGRALLOC_USE_LEGACY_LOCK=0",
 	],
 	product_variables: {
 		platform_sdk_version: {

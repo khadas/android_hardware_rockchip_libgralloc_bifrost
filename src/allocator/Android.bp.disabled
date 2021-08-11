@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Arm Limited.
+ * Copyright (C) 2020-2021 Arm Limited.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,10 +61,6 @@ arm_gralloc_allocator_cc_defaults {
 			],
 		},
 	},
-	srcs: [
-		"ion_support.cpp",
-		"shared_memory.cpp",
-	],
 	static_libs: [
 		"libarect",
 	],
@@ -79,13 +75,5 @@ arm_gralloc_allocator_cc_defaults {
 	],
 	header_libs: [
 		"libnativebase_headers",
-	],
-}
-
-cc_library_static {
-	name: "libgralloc_allocator",
-	defaults: [
-		"arm_gralloc_allocator_defaults",
-		"arm_gralloc_version_defaults",
 	],
 }

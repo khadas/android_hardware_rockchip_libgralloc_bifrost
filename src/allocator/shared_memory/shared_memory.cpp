@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Arm Limited. All rights reserved.
+ * Copyright (C) 2020-2021 Arm Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *

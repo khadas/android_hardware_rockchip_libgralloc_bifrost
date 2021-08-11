@@ -53,14 +53,13 @@ const static std::unordered_map<uint64_t, table_entry> table =
 	{ MALI_GRALLOC_FORMAT_INTERNAL_P010, {DRM_FORMAT_P010, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_P210, {DRM_FORMAT_P210, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_Y410, {DRM_FORMAT_Y410, format_colormodel::yuv} },
+	{ MALI_GRALLOC_FORMAT_INTERNAL_YUV444, {DRM_FORMAT_YUV444, format_colormodel::yuv} },
+	{ MALI_GRALLOC_FORMAT_INTERNAL_Q410, {DRM_FORMAT_Q410, format_colormodel::yuv} },
+	{ MALI_GRALLOC_FORMAT_INTERNAL_Q401, {DRM_FORMAT_Q401, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_YUV422_8BIT, {DRM_FORMAT_YUYV, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_YUV420_8BIT_I, {DRM_FORMAT_YUV420_8BIT, format_colormodel::yuv} },
 	{ MALI_GRALLOC_FORMAT_INTERNAL_YUV420_10BIT_I, {DRM_FORMAT_YUV420_10BIT, format_colormodel::yuv} },
 
-	/* Deprecated legacy formats, mapped to MALI_GRALLOC_FORMAT_INTERNAL_YUV422_8BIT. */
-	{ HAL_PIXEL_FORMAT_YCbCr_422_I, {DRM_FORMAT_YUYV, format_colormodel::yuv} },
-	/* Deprecated legacy formats, mapped to MALI_GRALLOC_FORMAT_INTERNAL_NV21. */
-	{ HAL_PIXEL_FORMAT_YCrCb_420_SP, {DRM_FORMAT_NV21, format_colormodel::yuv} },
 	/* Format introduced in Android P, mapped to MALI_GRALLOC_FORMAT_INTERNAL_P010. */
 	{ HAL_PIXEL_FORMAT_YCBCR_P010, {DRM_FORMAT_P010, format_colormodel::yuv} },
 };
@@ -87,6 +86,83 @@ uint32_t drm_fourcc_from_handle(const private_handle_t *hnd)
 	return entry->second.fourcc;
 }
 
+static uint64_t get_afrc_modifier_tags(const private_handle_t *hnd)
+{
+	const uint64_t unmasked_format = hnd->alloc_format;
+	if (!is_format_afrc(unmasked_format))
+	{
+		return 0;
+	}
+
+	const uint64_t internal_format = get_internal_format_from_gralloc_format(unmasked_format);
+	const uint64_t internal_modifier = get_modifier_from_gralloc_format(unmasked_format);
+	uint64_t modifier = 0;
+
+	auto entry = table.find(internal_format);
+	if (entry == table.end())
+	{
+		return 0;
+	}
+
+	if (!(internal_modifier & MALI_GRALLOC_INTFMT_AFRC_ROT_LAYOUT))
+	{
+		modifier |= AFRC_FORMAT_MOD_LAYOUT_SCAN;
+	}
+
+	/* If the afrc format is in yuv colormodel it should also have more than a single plane */
+	if (entry->second.colormodel == format_colormodel::yuv && hnd->is_multi_plane())
+	{
+		const uint64_t luma_block_size = internal_modifier &
+			MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_MASK);
+		const uint64_t chroma_block_size = internal_modifier &
+			MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_MASK);
+
+		switch (luma_block_size)
+		{
+		case MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_32):
+			modifier |= AFRC_FORMAT_MOD_LUMA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_32);
+			break;
+		case MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_24):
+			modifier |= AFRC_FORMAT_MOD_LUMA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_24);
+			break;
+		case MALI_GRALLOC_INTFMT_AFRC_LUMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_16):
+			modifier |= AFRC_FORMAT_MOD_LUMA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_16);
+			break;
+		}
+
+		switch (chroma_block_size)
+		{
+		case MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_32):
+			modifier |= AFRC_FORMAT_MOD_CHROMA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_32);
+			break;
+		case MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_24):
+			modifier |= AFRC_FORMAT_MOD_CHROMA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_24);
+			break;
+		case MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_16):
+			modifier |= AFRC_FORMAT_MOD_CHROMA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_16);
+			break;
+		}
+	} else
+	{
+		const uint64_t rgba_block_size = internal_modifier &
+			MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_MASK);
+
+		switch (rgba_block_size)
+		{
+		case MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_32):
+			modifier |= AFRC_FORMAT_MOD_RGBA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_32);
+			break;
+		case MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_24):
+			modifier |= AFRC_FORMAT_MOD_RGBA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_24);
+			break;
+		case MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES(MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_16):
+			modifier |= AFRC_FORMAT_MOD_RGBA_CU_SIZE(AFRC_FORMAT_MOD_CU_SIZE_16);
+			break;
+		}
+	}
+
+	return DRM_FORMAT_MOD_ARM_AFRC(modifier);
+}
 
 static uint64_t get_afbc_modifier_tags(const private_handle_t *hnd)
 {
@@ -155,6 +231,10 @@ uint64_t drm_modifier_from_handle(const private_handle_t *hnd)
 	if (is_format_afbc(hnd->alloc_format))
 	{
 		return get_afbc_modifier_tags(hnd);
+	}
+	else if (is_format_afrc(hnd->alloc_format))
+	{
+		return get_afrc_modifier_tags(hnd);
 	}
 	else if (is_format_block_linear(hnd->alloc_format))
 	{

@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2020 ARM Limited. All rights reserved.
+# Copyright (C) 2020-2021 ARM Limited. All rights reserved.
 #
 # Copyright (C) 2008 The Android Open Source Project
 #
@@ -26,7 +26,7 @@ LOCAL_MULTILIB := both
 
 LOCAL_C_INCLUDES := $(GRALLOC_SRC_PATH)
 
-LOCAL_SRC_FILES := ion_support.cpp shared_memory.cpp
+LOCAL_SRC_FILES := ion/ion.cpp shared_memory/shared_memory.cpp
 
 LOCAL_SHARED_LIBRARIES := libhardware liblog libcutils libion libsync libutils
 

@@ -28,24 +28,19 @@
 #include <hardware/gralloc1.h>
 
 #include "buffer_allocation.h"
-#include "allocator/ion_support.h"
-#include "allocator/shared_memory.h"
+#include "allocator/allocator.h"
+#include "allocator/shared_memory/shared_memory.h"
 #include "private_interface_types.h"
 #include "buffer.h"
 #include "gralloc/attributes.h"
 #include "buffer_descriptor.h"
-#include "debug.h"
 #include "log.h"
 #include "format_info.h"
-
-#if GRALLOC_USE_LEGACY_CALCS == 1
-#include "legacy/buffer_alloc.h"
-#endif
+#include "usages.h"
 
 #define AFBC_PIXELS_PER_BLOCK 256
 #define AFBC_HEADER_BUFFER_BYTES_PER_BLOCKENTRY 16
 
-static int mali_gralloc_buffer_free_internal(buffer_handle_t *pHandle, uint32_t num_hnds);
 bool afbc_format_fallback(uint32_t * const format_idx, const uint64_t usage, bool force);
 
 
@@ -71,6 +66,22 @@ static void afbc_buffer_align(const bool is_tiled, int *size)
 	}
 
 	*size = GRALLOC_ALIGN(*size, buffer_byte_alignment);
+}
+
+static uint32_t afrc_plane_alignment_requirement(uint32_t coding_unit_size)
+{
+	switch (coding_unit_size)
+	{
+	case 16:
+		return 1024;
+	case 24:
+		return 512;
+	case 32:
+		return 2048;
+	default:
+		MALI_GRALLOC_LOGE("internal error: invalid coding unit size (%" PRIu32 ")", coding_unit_size);
+		return 0;
+	}
 }
 
 /*
@@ -251,6 +262,67 @@ bool get_alloc_type(const uint64_t format_ext,
 			alloc_type->is_padded = true;
 		}
 	}
+	else if (is_format_afrc(format_ext))
+	{
+		const format_info_t &format = formats[format_idx];
+
+		alloc_type->primary_type = AllocBaseType::AFRC;
+
+		if (format_ext & MALI_GRALLOC_INTFMT_AFRC_ROT_LAYOUT)
+		{
+			alloc_type->afrc.paging_tile_width = 8;
+			alloc_type->afrc.paging_tile_height = 8;
+		}
+		else
+		{
+			alloc_type->afrc.paging_tile_width = 16;
+			alloc_type->afrc.paging_tile_height = 4;
+		}
+
+		alloc_type->afrc.rgba_luma_coding_unit_bytes = MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_UNWRAP(
+		    (format_ext >> MALI_GRALLOC_INTFMT_AFRC_RGBA_CODING_UNIT_BYTES_SHIFT) &
+		    MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_MASK);
+		alloc_type->afrc.rgba_luma_plane_alignment = afrc_plane_alignment_requirement(
+		    alloc_type->afrc.rgba_luma_coding_unit_bytes);
+		if (alloc_type->afrc.rgba_luma_plane_alignment == 0)
+		{
+			return false;
+		}
+
+		alloc_type->afrc.chroma_coding_unit_bytes = MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_UNWRAP(
+		    (format_ext >> MALI_GRALLOC_INTFMT_AFRC_CHROMA_CODING_UNIT_BYTES_SHIFT) &
+		    MALI_GRALLOC_INTFMT_AFRC_CODING_UNIT_BYTES_MASK);
+		alloc_type->afrc.chroma_plane_alignment = afrc_plane_alignment_requirement(
+		    alloc_type->afrc.chroma_coding_unit_bytes);
+		if (alloc_type->afrc.chroma_plane_alignment == 0)
+		{
+			return false;
+		}
+
+		for (auto plane = 0; plane < format.npln; ++plane)
+		{
+			switch (format.ncmp[plane])
+			{
+			case 1:
+				alloc_type->afrc.clump_width[plane] = alloc_type->afrc.paging_tile_width;
+				alloc_type->afrc.clump_height[plane] = alloc_type->afrc.paging_tile_height;
+				break;
+			case 2:
+				alloc_type->afrc.clump_width[plane] = 8;
+				alloc_type->afrc.clump_height[plane] = 4;
+				break;
+			case 3:
+			case 4:
+				alloc_type->afrc.clump_width[plane] = 4;
+				alloc_type->afrc.clump_height[plane] = 4;
+				break;
+			default:
+				MALI_GRALLOC_LOGE("internal error: invalid number of components in plane %d (%d)",
+				                  static_cast<int>(plane), static_cast<int>(format.ncmp[plane]));
+				return false;
+			}
+		}
+	}
 	else if (is_format_block_linear(format_ext))
 	{
 		alloc_type->primary_type = AllocBaseType::BLOCK_LINEAR;
@@ -413,6 +485,11 @@ static void get_pixel_w_h(uint32_t * const width,
 			pixel_align_h = max(pixel_align_h, 16);
 		}
 	}
+	else if (alloc_type.is_afrc())
+	{
+		pixel_align_w = alloc_type.afrc.paging_tile_width * alloc_type.afrc.clump_width[plane];
+		pixel_align_h = alloc_type.afrc.paging_tile_height * alloc_type.afrc.clump_height[plane];
+	}
 	else if (alloc_type.is_block_linear())
 	{
 		pixel_align_w = pixel_align_h = 16;
@@ -543,7 +620,18 @@ static void calc_allocation_size(const int width,
 		/*
 		 * Calculate byte stride (per plane).
 		 */
-		if (alloc_type.is_afbc())
+		if (alloc_type.is_afrc())
+		{
+			uint32_t coding_unit_bytes = plane == 0
+			    ? alloc_type.afrc.rgba_luma_coding_unit_bytes
+			    : alloc_type.afrc.chroma_coding_unit_bytes;
+
+			uint32_t paging_tile_stride =
+			    plane_info[plane].alloc_width / alloc_type.afrc.clump_width[plane] / alloc_type.afrc.paging_tile_width;
+			const uint32_t coding_units_in_paging_tile = 64;
+			plane_info[plane].byte_stride = paging_tile_stride * coding_units_in_paging_tile * coding_unit_bytes;
+		}
+		else if (alloc_type.is_afbc())
 		{
 			assert((plane_info[plane].alloc_width * format.bpp_afbc[plane]) % 8 == 0);
 			plane_info[plane].byte_stride = (plane_info[plane].alloc_width * format.bpp_afbc[plane]) / 8;
@@ -632,8 +720,8 @@ static void calc_allocation_size(const int width,
 		if (plane == 0)
 		{
 			*pixel_stride = 0;
-			const bool is_cpu_accessible = !alloc_type.is_afbc() &&
-			    !alloc_type.is_block_linear() && has_cpu_usage;
+			const bool is_cpu_accessible =
+			    !alloc_type.is_afbc() && !alloc_type.is_afrc() && !alloc_type.is_block_linear() && has_cpu_usage;
 			if (is_cpu_accessible)
 			{
 				assert((plane_info[plane].byte_stride * 8) % format.bpp[plane] == 0);
@@ -669,6 +757,20 @@ static void calc_allocation_size(const int width,
 				afbc_buffer_align(alloc_type.is_tiled, &back_buffer_size);
 				body_size += back_buffer_size;
 			}
+		}
+		else if (alloc_type.is_afrc())
+		{
+			uint32_t alignment = plane == 0
+			    ? alloc_type.afrc.rgba_luma_plane_alignment
+			    : alloc_type.afrc.chroma_plane_alignment;
+			*size = GRALLOC_ALIGN(*size, alignment);
+
+			uint32_t coding_unit_bytes = plane == 0
+			    ? alloc_type.afrc.rgba_luma_coding_unit_bytes
+			    : alloc_type.afrc.chroma_coding_unit_bytes;
+			uint32_t s_coding_units = plane_info[plane].alloc_width / alloc_type.afrc.clump_width[plane];
+			uint32_t t_coding_units = plane_info[plane].alloc_height / alloc_type.afrc.clump_height[plane];
+			body_size = s_coding_units * t_coding_units * coding_unit_bytes;
 		}
 		else if (alloc_type.is_block_linear())
 		{
@@ -746,6 +848,14 @@ static bool validate_format(const format_info_t * const format,
 			return false;
 		}
 	}
+	else if(alloc_type.is_afrc())
+	{
+		if (!format->afrc)
+		{
+			MALI_GRALLOC_LOGE("ERROR: AFRC format requested but not supported for base format: %" PRIx32, format->id);
+			return false;
+		}
+	}
 	else if (alloc_type.is_block_linear())
 	{
 		if (!format->block_linear)
@@ -773,14 +883,15 @@ static bool validate_format(const format_info_t * const format,
 	return true;
 }
 
-int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescriptor)
+int mali_gralloc_derive_format_and_size(buffer_descriptor_t *descriptor)
 {
 	alloc_type_t alloc_type{};
 	int err;
 
-	int alloc_width = bufDescriptor->width;
-	int alloc_height = bufDescriptor->height;
-	uint64_t usage = bufDescriptor->producer_usage | bufDescriptor->consumer_usage;
+	int alloc_width = descriptor->width;
+	int alloc_height = descriptor->height;
+	uint64_t usage = descriptor->producer_usage | descriptor->consumer_usage;
+	buffer_descriptor_t* bufDescriptor = descriptor; // 'descriptor' 的别名.
 
 	/*
 	* Select optimal internal pixel format based upon
@@ -806,27 +917,27 @@ int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescripto
 	if (bufDescriptor->alloc_format == MALI_GRALLOC_FORMAT_INTERNAL_UNDEFINED)
 	{
 		MALI_GRALLOC_LOGE("ERROR: Unrecognized and/or unsupported format 0x%" PRIx64 " and usage 0x%" PRIx64,
-		       bufDescriptor->hal_format, usage);
+		       descriptor->hal_format, usage);
 		return -EINVAL;
 	}
 
-	int32_t format_idx = get_format_index(bufDescriptor->alloc_format & MALI_GRALLOC_INTFMT_FMT_MASK);
+	int32_t format_idx = get_format_index(descriptor->alloc_format & MALI_GRALLOC_INTFMT_FMT_MASK);
 	if (format_idx == -1)
 	{
 		return -EINVAL;
 	}
-	MALI_GRALLOC_LOGV("alloc_format: 0x%" PRIx64 " format_idx: %d", bufDescriptor->alloc_format, format_idx);
+	MALI_GRALLOC_LOGV("alloc_format: 0x%" PRIx64 " format_idx: %d", descriptor->alloc_format, format_idx);
 
 	/*
 	 * Obtain allocation type (uncompressed, AFBC basic, etc...)
 	 */
-	if (!get_alloc_type(bufDescriptor->alloc_format & MALI_GRALLOC_INTFMT_EXT_MASK,
+	if (!get_alloc_type(descriptor->alloc_format & MALI_GRALLOC_INTFMT_EXT_MASK,
 	    format_idx, usage, &alloc_type))
 	{
 		return -EINVAL;
 	}
 
-	if (!validate_format(&formats[format_idx], alloc_type, bufDescriptor))
+	if (!validate_format(&formats[format_idx], alloc_type, descriptor))
 	{
 		return -EINVAL;
 	}
@@ -837,7 +948,7 @@ int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescripto
 	 * If using AFBC, further adjustments to the allocation width and height will be made later
 	 * based on AFBC alignment requirements and, for YUV, the plane properties.
 	 */
-	mali_gralloc_adjust_dimensions(bufDescriptor->alloc_format,
+	mali_gralloc_adjust_dimensions(descriptor->alloc_format,
 	                               usage,
 	                               &alloc_width,
 	                               &alloc_height);
@@ -900,148 +1011,7 @@ int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescripto
 			adjust_rk_video_buffer_size(bufDescriptor);
 		}
 	}
-
-#if 0
-	int pixel_stride_rk;	// pixel stride to satisfy implicit_requirement_for_rk_gralloc_allocate,
-				// 即 rk_video_decoder 预期的值.
-	size_t size_rk;
-	plane_info_t plane_info_rk[MAX_PLANES];
-
-	memset(plane_info_rk, 0, sizeof(plane_info_rk) );
-
-	/* 若当前 alloc 操作 "应该" 满足 implicit_requirement_for_rk_gralloc_allocate, 则... */
-	if ( should_satisfy_implicit_requirement_for_rk_gralloc_allocate(bufDescriptor->hal_format, // 'req_format'
-									 bufDescriptor->alloc_format,
-									 bufDescriptor->producer_usage,
-									 bufDescriptor->consumer_usage) )
-	{
-		I("current buffer should satisfy implicit requirement for rk gralloc allocate.");
-
-		/* 计算满足 implicit_requirement_for_rk_gralloc_allocate 的 pixel_stride, size, plane_info 等信息. */
-		calc_layout_info_satisfying_implicit_requirement_for_rk_gralloc_allocate(bufDescriptor->width,
-											 bufDescriptor->height,
-											 bufDescriptor->hal_format, // 'req_format'
-											 bufDescriptor->alloc_format,
-											 formats[format_idx],
-											 &pixel_stride_rk,
-											 &size_rk,
-											 plane_info_rk);
-
-		if ( 0 != bufDescriptor->pixel_stride )
-		{
-			/* 若 pixel stride 不同, 则 将 'bufDescriptor->pixel_stride' 调整为 'pixel_stride_rk'. */
-			if ( pixel_stride_rk != bufDescriptor->pixel_stride )
-			{
-				W("'pixel_stride_rk'(%d) is different from 'bufDescriptor->pixel_stride'(%d); "
-						"force to use pixel_stride_rk and plane_info_rk.",
-				  pixel_stride_rk,
-				  bufDescriptor->pixel_stride);
-				bufDescriptor->pixel_stride = pixel_stride_rk;
-
-				memcpy(bufDescriptor->plane_info, plane_info_rk, sizeof(plane_info_rk) );
-			}
-		}
-		else
-		{
-			uint32_t byte_stride_rk = plane_info_rk[0].byte_stride; // RK 计算得到的 byte_stride of plane_0
-			uint32_t byte_stride_arm = bufDescriptor->plane_info[0].byte_stride;
-
-			if ( byte_stride_rk != byte_stride_arm )
-			{
-				W("'byte_stride_rk'(%d) is different from 'byte_stride_arm'(%d); "
-						"force to use plane_info_rk.",
-				  byte_stride_rk,
-				  byte_stride_arm);
-
-				memcpy(bufDescriptor->plane_info, plane_info_rk, sizeof(plane_info_rk) );
-			}
-		}
-
-		if ( size_rk > bufDescriptor->size )
-		{
-			W("'size_rk'(%zd) is bigger than 'bufDescriptor->size'(%zd); "
-					"force to use size_rk.",
-			  size_rk,
-			  bufDescriptor->size);
-			bufDescriptor->size = size_rk;
-		}
-	}
-#endif
-
 	/*-------------------------------------------------------*/
-
-#if GRALLOC_USE_LEGACY_CALCS == 1
-#error
-
-	/* Pre-fill legacy values with those calculated above
-	 * since these are sometimes not set at all by the legacy calculations.
-	 */
-	bufDescriptor->old_byte_stride = bufDescriptor->plane_info[0].byte_stride;
-	bufDescriptor->old_alloc_width = bufDescriptor->plane_info[0].alloc_width;
-	bufDescriptor->old_alloc_height = bufDescriptor->plane_info[0].alloc_height;
-
-	bool legacy_type = true;
-	/* Translate to legacy alloc_type. */
-	legacy::alloc_type_t legacy_alloc_type;
-	switch (alloc_type.primary_type)
-	{
-		case AllocBaseType::AFBC:
-			legacy_alloc_type.primary_type = legacy::AllocBaseType::AFBC;
-			break;
-		case AllocBaseType::AFBC_WIDEBLK:
-			legacy_alloc_type.primary_type = legacy::AllocBaseType::AFBC_WIDEBLK;
-			break;
-		case AllocBaseType::AFBC_EXTRAWIDEBLK:
-			legacy_alloc_type.primary_type = legacy::AllocBaseType::AFBC_EXTRAWIDEBLK;
-			break;
-		case AllocBaseType::UNCOMPRESSED:
-			legacy_alloc_type.primary_type = legacy::AllocBaseType::UNCOMPRESSED;
-			break;
-		default:
-			legacy_type = false;
-			break;
-	}
-
-	if (alloc_type.is_padded)
-	{
-		legacy_alloc_type.primary_type = legacy::AllocBaseType::AFBC_PADDED;
-	}
-	legacy_alloc_type.is_multi_plane = alloc_type.is_multi_plane;
-	legacy_alloc_type.is_tiled = alloc_type.is_tiled;
-
-	if (legacy_type)
-	{
-		/*
-		* Resolution of frame (and internal dimensions) might require adjustment
-		* based upon specific usage and pixel format.
-		*/
-		legacy::mali_gralloc_adjust_dimensions(bufDescriptor->old_internal_format, usage, legacy_alloc_type,
-		                                       bufDescriptor->width, bufDescriptor->height,
-		                                       &bufDescriptor->old_alloc_width, &bufDescriptor->old_alloc_height);
-
-		size_t size = 0;
-		int res = legacy::get_alloc_size(bufDescriptor->old_internal_format, usage, legacy_alloc_type,
-		                                 bufDescriptor->old_alloc_width, bufDescriptor->old_alloc_height,
-		                                 &bufDescriptor->old_byte_stride, &bufDescriptor->pixel_stride, &size);
-		if (res < 0)
-		{
-			MALI_GRALLOC_LOGW("Legacy allocation size calculation failed. "
-			                  "Relying upon new calculation instead.");
-		}
-
-		/* Accommodate for larger legacy allocation size. */
-		if (size > bufDescriptor->size)
-		{
-			bufDescriptor->size = size;
-		}
-	}
-#else
-	/* Clear all legacy values. */
-	bufDescriptor->old_internal_format = 0;
-	bufDescriptor->old_alloc_width = 0;
-	bufDescriptor->old_alloc_height = 0;
-	bufDescriptor->old_byte_stride = 0;
-#endif
 
 	/*
 	 * Each layer of a multi-layer buffer must be aligned so that
@@ -1051,92 +1021,57 @@ int mali_gralloc_derive_format_and_size(buffer_descriptor_t * const bufDescripto
 	 * AFBC specification v3.4, section 2.15: "Alignment requirements").
 	 * Also update the buffer size to accommodate all layers.
 	 */
-	if (bufDescriptor->layer_count > 1)
+	if (descriptor->layer_count > 1)
 	{
-		if (is_format_afbc(bufDescriptor->alloc_format))
+		if (is_format_afbc(descriptor->alloc_format))
 		{
-			if (bufDescriptor->alloc_format & MALI_GRALLOC_INTFMT_AFBC_TILED_HEADERS)
+			if (descriptor->alloc_format & MALI_GRALLOC_INTFMT_AFBC_TILED_HEADERS)
 			{
-				bufDescriptor->size = GRALLOC_ALIGN(bufDescriptor->size, 4096);
+				descriptor->size = GRALLOC_ALIGN(descriptor->size, 4096);
 			}
 			else
 			{
-				bufDescriptor->size = GRALLOC_ALIGN(bufDescriptor->size, 128);
+				descriptor->size = GRALLOC_ALIGN(descriptor->size, 128);
 			}
 		}
 
-		bufDescriptor->size *= bufDescriptor->layer_count;
+		descriptor->size *= descriptor->layer_count;
 	}
 
 	return 0;
 }
 
 
-int mali_gralloc_buffer_allocate(const gralloc_buffer_descriptor_t *descriptors,
-                                 uint32_t numDescriptors, buffer_handle_t *pHandle)
+int mali_gralloc_buffer_allocate(buffer_descriptor_t *descriptor, private_handle_t **out_handle)
 {
-	int err;
-
-	for (uint32_t i = 0; i < numDescriptors; i++)
-	{
-		buffer_descriptor_t * const bufDescriptor = (buffer_descriptor_t *)(descriptors[i]);
-
-		/* Derive the buffer size from descriptor parameters */
-		err = mali_gralloc_derive_format_and_size(bufDescriptor);
-		if (err != 0)
-		{
-			return err;
-		}
-	}
-
-	/* Allocate ION backing store memory */
-	err = mali_gralloc_ion_allocate(descriptors, numDescriptors, pHandle);
-	if (err < 0)
+	int err = mali_gralloc_derive_format_and_size(descriptor);
+	if (err != 0)
 	{
 		return err;
 	}
 
-	for (uint32_t i = 0; i < numDescriptors; i++)
+	int ret = allocator_allocate(descriptor, out_handle);
+	if (ret != 0)
 	{
-		buffer_descriptor_t * const bufDescriptor = (buffer_descriptor_t *)descriptors[i];
-		private_handle_t *hnd = (private_handle_t *)pHandle[i];
-		uint64_t usage = bufDescriptor->consumer_usage | bufDescriptor->producer_usage;
-
-		mali_gralloc_dump_buffer_add(hnd);
-
-		hnd->backing_store_id = getUniqueId();
+		return ret;
 	}
+
+	(*out_handle)->backing_store_id = getUniqueId();
 
 	return 0;
 }
 
-int mali_gralloc_buffer_free(buffer_handle_t pHandle)
+int mali_gralloc_buffer_free(private_handle_t *hnd)
 {
-	auto *hnd = const_cast<private_handle_t *>(
-	    reinterpret_cast<const private_handle_t *>(pHandle));
-
 	if (hnd == nullptr)
 	{
 		return -1;
 	}
 
-	mali_gralloc_ion_free(hnd);
+	allocator_free(hnd);
 	gralloc_shared_memory_free(hnd->share_attr_fd, hnd->attr_base, hnd->attr_size);
 	hnd->share_fd = hnd->share_attr_fd = -1;
 	hnd->base = hnd->attr_base = MAP_FAILED;
 
 	return 0;
-}
-
-static int mali_gralloc_buffer_free_internal(buffer_handle_t *pHandle, uint32_t num_hnds)
-{
-	int err = -1;
-	uint32_t i = 0;
-
-	for (i = 0; i < num_hnds; i++)
-	{
-		err = mali_gralloc_buffer_free(pHandle[i]);
-	}
-
-	return err;
 }

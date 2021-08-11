@@ -31,14 +31,7 @@ MULTIARCH_SRC_FILES := \
     buffer_allocation.cpp \
     formats.cpp \
     reference.cpp \
-    debug.cpp \
     format_info.cpp
-
-ifeq ($(GRALLOC_USE_LEGACY_CALCS_LOCK), 1)
-MULTIARCH_SRC_FILES += \
-    legacy/buffer_alloc.cpp \
-    legacy/buffer_access.cpp
-endif
 
 MULTIARCH_SHARED_LIBRARIES := liblog libcutils libutils
 

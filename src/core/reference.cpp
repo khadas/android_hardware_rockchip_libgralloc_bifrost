@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, 2018-2020 ARM Limited. All rights reserved.
+ * Copyright (C) 2016, 2018-2021 ARM Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -20,11 +20,11 @@
 
 #include "private_interface_types.h"
 #include "buffer.h"
-#include "allocator/ion_support.h"
-#include "allocator/shared_memory.h"
+#include "allocator/allocator.h"
+#include "allocator/shared_memory/shared_memory.h"
 #include "gralloc/attributes.h"
 #include "buffer_allocation.h"
-#include "debug.h"
+#include "gralloc_version.h"
 
 static pthread_mutex_t s_map_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -51,20 +51,7 @@ int mali_gralloc_reference_retain(buffer_handle_t handle)
 		hnd->ref_count = 1;
 	}
 
-	int retval = -EINVAL;
-
-	if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)
-	{
-		retval = 0;
-	}
-	else if (hnd->flags & (private_handle_t::PRIV_FLAGS_USES_ION))
-	{
-		retval = mali_gralloc_ion_map(hnd);
-	}
-	else
-	{
-		MALI_GRALLOC_LOGE("Unknown buffer flags not supported. flags = %d", hnd->flags);
-	}
+	int retval = allocator_map(hnd);
 
 	pthread_mutex_unlock(&s_map_lock);
 	return retval;
@@ -94,18 +81,8 @@ int mali_gralloc_reference_release(buffer_handle_t handle, bool canFree)
 
 		if (hnd->ref_count == 0 && canFree)
 		{
-
-			if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER)
-			{
-				close(hnd->fd);
-			}
-			else
-			{
-				mali_gralloc_dump_buffer_erase(hnd);
-			}
-			mali_gralloc_buffer_free(handle);
+			mali_gralloc_buffer_free(hnd);
 			native_handle_delete(const_cast<native_handle_t *>(handle));
-
 		}
 	}
 	else if (hnd->remote_pid == getpid()) // never unmap buffers that were not imported into this process
@@ -114,15 +91,7 @@ int mali_gralloc_reference_release(buffer_handle_t handle, bool canFree)
 
 		if (hnd->ref_count == 0)
 		{
-
-			if (hnd->flags & (private_handle_t::PRIV_FLAGS_USES_ION))
-			{
-				mali_gralloc_ion_unmap(hnd);
-			}
-			else
-			{
-				MALI_GRALLOC_LOGE("Unregistering/Releasing unknown buffer is not supported. Flags = %d", hnd->flags);
-			}
+			allocator_unmap(hnd);
 
 			/*
 			 * Close shared attribute region file descriptor. It might seem strange to "free"

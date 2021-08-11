@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020 Arm Limited. All rights reserved.
+ * Copyright (C) 2016-2021 Arm Limited. All rights reserved.
  *
  * Copyright (C) 2008 The Android Open Source Project
  *
@@ -21,8 +21,6 @@
 #include "buffer.h"
 #include "gralloc/formats.h"
 #include <string>
-
-typedef uint64_t gralloc_buffer_descriptor_t;
 
 /* A buffer_descriptor contains the requested parameters for the buffer
  * as well as the calculated parameters that are passed to the allocator.
@@ -52,12 +50,6 @@ struct buffer_descriptor_t
 	uint64_t alloc_format;
 	plane_info_t plane_info[MAX_PLANES];
 
-	/* Calculated values only used for GRALLOC_USE_LEGACY_CALCS */
-	int old_byte_stride;
-	int old_alloc_width;
-	int old_alloc_height;
-	uint64_t old_internal_format;
-
 	buffer_descriptor_t() :
 	    signature(0),
 	    width(0),
@@ -71,11 +63,7 @@ struct buffer_descriptor_t
 	    reserved_size(0),
 	    size(0),
 	    pixel_stride(0),
-	    alloc_format(0),
-	    old_byte_stride(0),
-	    old_alloc_width(0),
-	    old_alloc_height(0),
-	    old_internal_format(0)
+	    alloc_format(0)
 	{
 		memset(plane_info, 0, sizeof(plane_info_t) * MAX_PLANES);
 	}

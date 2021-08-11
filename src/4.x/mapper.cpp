@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Arm Limited. All rights reserved.
+ * Copyright (C) 2020-2021 Arm Limited. All rights reserved.
  *
  * Copyright 2016 The Android Open Source Project
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 #include "hidl_common/descriptor.h"
 #include "hidl_common/mapper_metadata.h"
 
-#include "allocator/ion_support.h"
+#include "allocator/allocator.h"
 
 namespace arm
 {
@@ -41,7 +41,7 @@ GrallocMapper::GrallocMapper()
 
 GrallocMapper::~GrallocMapper()
 {
-	mali_gralloc_ion_close();
+	allocator_close();
 }
 
 Return<void> GrallocMapper::createDescriptor(const BufferDescriptorInfo &descriptorInfo, createDescriptor_cb hidl_cb)

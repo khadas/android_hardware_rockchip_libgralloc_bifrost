@@ -161,5 +161,67 @@ extern "C"
 #define AFBC_FORMAT_MOD_USM (((uint64_t)1) << 12)
 #endif
 
+/* AFRC modifiers. */
+#ifndef DRM_FORMAT_MOD_ARM_CODE
+#define DRM_FORMAT_MOD_ARM_CODE(__type, __val) \
+       fourcc_mod_code(ARM, ((((__u64)(__type)) << 52) | ((__val)&0x000fffffffffffffULL)))
+#endif
+
+#ifndef DRM_FORMAT_MOD_ARM_TYPE_AFRC
+#define DRM_FORMAT_MOD_ARM_TYPE_AFRC 0x02
+#endif
+
+#ifndef DRM_FORMAT_MOD_ARM_AFRC
+#define DRM_FORMAT_MOD_ARM_AFRC(__afrc_mode) DRM_FORMAT_MOD_ARM_CODE(DRM_FORMAT_MOD_ARM_TYPE_AFRC, __afrc_mode)
+#endif
+
+/*
+ * AFRC scanline memory layout.
+ *
+ * Indicates scanline memory layout is in use for an AFRC encoded
+ * buffer. The memory layout is the same for all planes.
+*/
+#ifndef AFRC_FORMAT_MOD_LAYOUT_SCAN
+#define AFRC_FORMAT_MOD_LAYOUT_SCAN ((1ULL) << 8)
+#endif
+
+/*
+ * AFRC coding unit size.
+ *
+ * Indicates the coding unit size in bytes for one or more planes in an AFRC
+ * encoded buffer. The coding unit size for chrominance is the same for both
+ * Cb and Cr, which may be stored in separate planes.
+ *
+ * For RGBA formats, AFRC_FORMAT_MOD_RGBA_CU_SIZE must be specified.
+ * For YUV formats, both AFRC_FORMAT_MOD_LUMA_CU_SIZE and
+ * AFRC_FORMAT_MOD_CHROMA_CU_SIZE must be specified.
+ */
+#ifndef AFRC_FORMAT_MOD_CU_SIZE_MASK
+#define AFRC_FORMAT_MOD_CU_SIZE_MASK 0xf
+#endif
+
+#ifndef AFRC_FORMAT_MOD_CU_SIZE_16
+#define AFRC_FORMAT_MOD_CU_SIZE_16 (1ULL)
+#endif
+
+#ifndef AFRC_FORMAT_MOD_CU_SIZE_24
+#define AFRC_FORMAT_MOD_CU_SIZE_24 (2ULL)
+#endif
+
+#ifndef AFRC_FORMAT_MOD_CU_SIZE_32
+#define AFRC_FORMAT_MOD_CU_SIZE_32 (3ULL)
+#endif
+
+#ifndef AFRC_FORMAT_MOD_RGBA_CU_SIZE
+#define AFRC_FORMAT_MOD_RGBA_CU_SIZE(__afrc_cu_size) (__afrc_cu_size)
+#endif
+
+#ifndef AFRC_FORMAT_MOD_LUMA_CU_SIZE
+#define AFRC_FORMAT_MOD_LUMA_CU_SIZE(__afrc_cu_size) (__afrc_cu_size)
+#endif
+
+#ifndef AFRC_FORMAT_MOD_CHROMA_CU_SIZE
+#define AFRC_FORMAT_MOD_CHROMA_CU_SIZE(__afrc_cu_size) ((__afrc_cu_size) << 4)
+#endif
 
 }

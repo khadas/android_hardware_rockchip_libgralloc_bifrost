@@ -38,7 +38,6 @@
 # The Android version also affects the Gralloc version which is then used to decide
 # whether the Blueprint build files are enabled.
 # Defaults are:
-#   Android 9 : Gralloc 2, use makefiles.
 #   Android 10: Gralloc 3, use makefiles.
 #   Android 11: Gralloc 4, use Blueprint.
 #
@@ -67,9 +66,6 @@ fi
 SELECTED_PLATFORM=0
 for arg in "$@"; do
     case $arg in
-    ANDROID_9=y)
-        SELECTED_PLATFORM=9
-        ;;
     ANDROID_10=y)
         SELECTED_PLATFORM=10
         ;;
@@ -81,9 +77,6 @@ for arg in "$@"; do
         ;;
     PRIVATEBUFFER_INTERFACE=n)
         PRIVATE_BUFFER=0
-        ;;
-    GRALLOC_2=y)
-        GRALLOC_VERSION=2
         ;;
     GRALLOC_3=y)
         GRALLOC_VERSION=3
@@ -118,9 +111,6 @@ fi
 
 if [ $GRALLOC_VERSION = 0 ]; then
     case $PLATFORM_VERSION in
-    9)
-        GRALLOC_VERSION=2
-        ;;
     10)
         GRALLOC_VERSION=3
         ;;
@@ -159,7 +149,7 @@ else
     echo "Enabling build files for Gralloc version ${GRALLOC_VERSION}"
 fi
 
-if [ $GRALLOC_VERSION = 2 ] || [ $GRALLOC_VERSION = 3 ]; then
+if [ $GRALLOC_VERSION = 3 ]; then
     for path in `find . -name "*.mk.disabled"`; do
         mv $path ${path%.disabled}
     done
@@ -171,9 +161,10 @@ AIDL_FILES="interfaces/aidl/Android.bp.disabled
 
 # Blueprint files for all modules common to all Gralloc versions
 COMMON_FILES="Android.bp.disabled
+              src/allocator/Android.bp.disabled
+              src/allocator/shared_memory/Android.bp.disabled
               src/core/Android.bp.disabled
               src/capabilities/Android.bp.disabled
-              src/allocator/Android.bp.disabled
               src/hidl_common/Android.bp.disabled"
 
 # Blueprint files for tests
@@ -193,6 +184,12 @@ if [ $GRALLOC_VERSION = 4 ]; then
     for FILE in $GRALLOC4_FILES; do
         cp "${FILE}" "${FILE%.disabled}"
     done
+fi
+
+
+if [ $PLATFORM_VERSION -eq 11 ]; then
+    # Enable ion allocator
+    cp "src/allocator/ion/Android.bp.disabled" "src/allocator/ion/Android.bp"
 fi
 
 
