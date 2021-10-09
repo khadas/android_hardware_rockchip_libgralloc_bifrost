@@ -134,6 +134,9 @@ struct private_handle_t
 	{
 		PRIV_FLAGS_USES_ION_COMPOUND_HEAP = 1 << 2,
 		PRIV_FLAGS_USES_ION_DMA_HEAP = 1 << 3,
+
+		/* allocated from dmabuf_heaps. */
+		PRIV_FLAGS_USES_DBH = 1 << 6,
 	};
 
 	enum
