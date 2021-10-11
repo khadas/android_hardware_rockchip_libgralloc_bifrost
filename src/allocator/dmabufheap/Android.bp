@@ -33,5 +33,5 @@ cc_library_static {
         "arm_gralloc_version_defaults",
         "libgralloc_allocator_dependencies",
     ],
-    srcs: ["ion.cpp"],
+    srcs: ["dmabufheap.cpp"],
 }
