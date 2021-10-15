@@ -30,12 +30,6 @@ aidl_interface {
         cpp: {
             enabled: false,
         },
-        ndk: {
-            enabled: true,
-        },
     },
-    versions: [
-        "1",
-        "2",
-    ],
+    versions: ["1"],
 }
