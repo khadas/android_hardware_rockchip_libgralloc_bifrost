@@ -97,29 +97,7 @@ static const char* pick_dmabuf_heap(uint64_t usage)
 
 static int setup_mappings(BufferAllocator *ba)
 {
-	int ret;
-
-	/* Setup uncached system mapping */
-	ret = ba->MapNameToIonHeap(kDmabufSystemUncachedHeapName,
-				   ION_SYSTEM, 0,
-				   ION_HEAP_TYPE_SYSTEM, 0);
-	if (ret)
-	{
-		MALI_GRALLOC_LOGE("No uncached heap! Falling back to system!");
-	}
-
-
-	/* Setup cached system heap */
-	ret = ba->MapNameToIonHeap(kDmabufSystemHeapName,
-				   ION_SYSTEM,
-				   ION_FLAG_CACHED | ION_FLAG_CACHED_NEEDS_SYNC,
-				   ION_HEAP_TYPE_SYSTEM,
-				   ION_FLAG_CACHED | ION_FLAG_CACHED_NEEDS_SYNC);
-	if (ret)
-        {
-		MALI_GRALLOC_LOGE("failed to map cached_system_heap.");
-		return -ENOTSUP;
-        }
+	GRALLOC_UNUSED(ba);
 
 #if 0
 	/* Setup CMA heap */
