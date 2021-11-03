@@ -68,6 +68,10 @@ typedef enum
 	 */
 	RK_GRALLOC_USAGE_SPECIFY_STRIDE = GRALLOC_USAGE_PRIVATE_2,
 
+	/* 表征 "调用 alloc() 的 client 要求分配的 buffer 的所有物理 page 的地址都在 4G 以内".
+	*/
+	RK_GRALLOC_USAGE_WITHIN_4G = GRALLOC_USAGE_PRIVATE_11,
+
 	/* See comment for Gralloc 1.0, above. */
 	MALI_GRALLOC_USAGE_FRONTBUFFER = GRALLOC_USAGE_PRIVATE_0,
 

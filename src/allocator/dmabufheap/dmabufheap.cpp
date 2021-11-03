@@ -54,6 +54,13 @@
  * ---------------------------------------------------------------------------------------------------------
  */
 
+/* 从该 dmabufheap 分配得到的 buffer 是 cached 的, 且其物理地址在 4G 以内 (for dma32). */
+static const char kDmabufSystemDma32HeapName[] = "system-dma32";
+/* 从该 dmabufheap 分配得到的 buffer 是 uncached 的, 且其物理地址在 4G 以内. */
+static const char kDmabufSystemUncachedDma32HeapName[] = "system-uncached-dma32";
+
+
+
 #define ION_SYSTEM     (char*)"ion_system_heap"
 #define ION_CMA        (char*)"linux,cma"
 
@@ -85,6 +92,17 @@ static const char* pick_dmabuf_heap(uint64_t usage)
 		return NULL;
 	}
 #endif
+	else if ( usage & RK_GRALLOC_USAGE_WITHIN_4G )
+	{
+		if ( (usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_OFTEN )
+		{
+			return kDmabufSystemDma32HeapName; // cacheable dma32
+		}
+		else
+		{
+			return kDmabufSystemUncachedDma32HeapName; // uncacheable dma32
+		}
+	}
 	else if ( (usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_OFTEN )
 	{
 		return kDmabufSystemHeapName; // cacheable
@@ -95,10 +113,34 @@ static const char* pick_dmabuf_heap(uint64_t usage)
 	}
 }
 
+/* 原始定义在 drivers/staging/android/uapi/ion.h 中, 这里的定义必须保持一致. */
+#define ION_FLAG_DMA32 4
+
 static int setup_mappings(BufferAllocator *ba)
 {
-	GRALLOC_UNUSED(ba);
+	int ret;
 
+	/* Setup system-uncached-dma32 heap mapping */
+	ret = ba->MapNameToIonHeap(kDmabufSystemUncachedDma32HeapName,
+				   ION_SYSTEM,
+				   ION_FLAG_DMA32,
+				   ION_HEAP_TYPE_SYSTEM,
+				   ION_FLAG_DMA32);
+	if (ret)
+	{
+		MALI_GRALLOC_LOGE("No uncached heap! Falling back to system!");
+	}
+
+	/* Setup system-dma32 heap mapping. */
+	ret = ba->MapNameToIonHeap(kDmabufSystemDma32HeapName,
+				   ION_SYSTEM,
+				   ION_FLAG_CACHED | ION_FLAG_CACHED_NEEDS_SYNC | ION_FLAG_DMA32,
+				   ION_HEAP_TYPE_SYSTEM,
+				   ION_FLAG_CACHED | ION_FLAG_CACHED_NEEDS_SYNC | ION_FLAG_DMA32);
+	if (ret)
+        {
+		MALI_GRALLOC_LOGE("failed to map cached_system_heap.");
+	}
 #if 0
 	/* Setup CMA heap */
 	ret = ba->MapNameToIonHeap(DMABUF_CMA,
