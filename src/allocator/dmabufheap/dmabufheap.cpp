@@ -85,13 +85,10 @@ static const char* pick_dmabuf_heap(uint64_t usage)
 		MALI_GRALLOC_LOGE("Protected dmabuf_heap memory is not supported yet.");
 		return NULL;
 	}
-#if 0
 	else if ( usage & RK_GRALLOC_USAGE_PHY_CONTIG_BUFFER )
 	{
-		MALI_GRALLOC_LOGE("Physical continuous dmabuf_heap is not supported yet.");
-		return NULL;
+		return DMABUF_CMA;
 	}
-#endif
 	else if ( usage & RK_GRALLOC_USAGE_WITHIN_4G )
 	{
 		if ( (usage & GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_OFTEN )
@@ -141,7 +138,7 @@ static int setup_mappings(BufferAllocator *ba)
         {
 		MALI_GRALLOC_LOGE("failed to map cached_system_heap.");
 	}
-#if 0
+
 	/* Setup CMA heap */
 	ret = ba->MapNameToIonHeap(DMABUF_CMA,
 				   ION_CMA, 0,
@@ -149,9 +146,7 @@ static int setup_mappings(BufferAllocator *ba)
 	if (ret)
         {
 		MALI_GRALLOC_LOGE("failed to map cma_heap.");
-		return -ENOTSUP;
         }
-#endif
 
 	return 0;
 }
