@@ -1969,7 +1969,7 @@ static uint64_t rk_gralloc_select_format(const uint64_t req_format,
 		}
 		else	// if ( !should_disable_afbc_in_fb_target_layer() )
 		{
-			I("AFBC IS disabled for fb_target_layer.");
+			D("AFBC IS disabled for fb_target_layer.");
 			internal_format = req_format;
 		}
 
