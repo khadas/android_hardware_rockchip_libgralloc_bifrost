@@ -1660,6 +1660,7 @@ typedef enum rk_board_platform_t
 {
 	RK3326,
 	RK356X,
+	RK3588,
 	RK_BOARD_PLATFORM_UNKNOWN,
 } rk_board_platform_t;
 
@@ -1681,6 +1682,10 @@ static rk_board_platform_t get_rk_board_platform()
 		else if (0 == strcmp("rk356x", value) )
 		{
 			s_platform = RK356X;
+		}
+		else if (0 == strcmp("rk3588", value) )
+		{
+			s_platform = RK3588;
 		}
 		else
 		{
@@ -1947,6 +1952,7 @@ static uint64_t rk_gralloc_select_format(const uint64_t req_format,
 					break;
 
 				case RK356X:
+				case RK3588:
 					if ( 0 == (usage & MALI_GRALLOC_USAGE_NO_AFBC) )
 					{
 					    D("to allocate AFBC buffer for fb_target_layer on rk356x.");
@@ -1987,8 +1993,8 @@ static uint64_t rk_gralloc_select_format(const uint64_t req_format,
                 if ( 0 == (usage & MALI_GRALLOC_USAGE_NO_AFBC)
 			&& !(is_no_afbc_for_sf_client_layer_required_via_prop() ) )
                 {
-                        /* 若当前 platform 是 356x, 则... */
-                        if ( RK356X == get_rk_board_platform() )
+                        /* 若当前 platform 是 356x 或 3588, 则... */
+                        if ( RK356X == get_rk_board_platform() || RK3588 == get_rk_board_platform() )
                         {
                                 /* 尽可能对 buffers of sf_client_layer 使用 AFBC 格式. */
 
