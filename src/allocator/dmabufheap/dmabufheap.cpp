@@ -64,7 +64,7 @@ static const char kDmabufSystemUncachedDma32HeapName[] = "system-uncached-dma32"
 #define ION_SYSTEM     (char*)"ion_system_heap"
 #define ION_CMA        (char*)"linux,cma"
 
-#define DMABUF_CMA		(char*)"linux,cma"
+#define DMABUF_CMA		(char*)"cma"
 
 /* ---------------------------------------------------------------------------------------------------------
  * Local Variables
