@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#define ENABLE_DEBUG_LOG
+// #define ENABLE_DEBUG_LOG
 #include "../custom_log.h"
 
 /* Legacy shared attribute region is deprecated from Android 11.
