@@ -124,6 +124,7 @@ void allocate(buffer_descriptor_t *bufferDescriptor, uint32_t count, IAllocator:
 			  hnd->alloc_format, hnd->size, hnd->layer_count, hnd->backing_store_size,
 			  hnd->backing_store_id,
 			  hnd->allocating_pid, hnd->ref_count, hnd->yuv_info);
+#ifdef ENABLE_DEBUG_LOG
 			ALOGD("plane_info[0]: offset : %u, byte_stride : %u, alloc_width : %u, alloc_height : %u",
 					(hnd->plane_info)[0].offset,
 					(hnd->plane_info)[0].byte_stride,
@@ -134,6 +135,7 @@ void allocate(buffer_descriptor_t *bufferDescriptor, uint32_t count, IAllocator:
 					(hnd->plane_info)[1].byte_stride,
 					(hnd->plane_info)[1].alloc_width,
 					(hnd->plane_info)[1].alloc_height);
+#endif
 		}
 
 		int tmpStride = bufferDescriptor->pixel_stride;
