@@ -32,6 +32,7 @@ cc_library_static {
     ],
     header_libs: [
         "libgralloc_headers",
+        "libhardware_rockchip_headers",
     ],
     include_dirs: [
         ".",

@@ -86,6 +86,10 @@ static std::vector<std::vector<PlaneLayoutComponent>> plane_layout_components_fr
 			.drm_fourcc = DRM_FORMAT_BGR888,
 			.components = { { { R, 0, 8 }, { G, 8, 8 }, { B, 16, 8 } } }
 		},
+		{
+			.drm_fourcc = DRM_FORMAT_RGB888,
+			.components = { { { B, 0, 8 }, { G, 8, 8 }, { G, 16, 8 } } }
+		},
 		/* 32 bit RGB(A) */
 		{
 			.drm_fourcc = DRM_FORMAT_ARGB8888,

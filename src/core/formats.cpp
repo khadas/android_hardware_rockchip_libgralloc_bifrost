@@ -2009,13 +2009,16 @@ static uint64_t rk_gralloc_select_format(const uint64_t req_format,
                                 {
                                         /* 若 internal_format 不是 nv12,
                                            且 不是 MALI_GRALLOC_FORMAT_INTERNAL_P010,
+                                           ...
                                            且 不是 MALI_GRALLOC_FORMAT_INTERNAL_NV16,
+                                           且 不是 MALI_GRALLOC_FORMAT_INTERNAL_BGR_888,
                                            且 根据 size 判断 当前的 buffer_of_sf_client_layer 应该 使用 AFBC 格式,
                                            则... */
                                         if ( internal_format != MALI_GRALLOC_FORMAT_INTERNAL_NV12
                                                 && internal_format != MALI_GRALLOC_FORMAT_INTERNAL_P010
                                                 && internal_format != MALI_GRALLOC_FORMAT_INTERNAL_RGBA_16161616
                                                 && internal_format != MALI_GRALLOC_FORMAT_INTERNAL_NV16
+                                                && internal_format != MALI_GRALLOC_FORMAT_INTERNAL_BGR_888
                                                 && should_sf_client_layer_use_afbc_format_by_size(internal_format,
                                                                                                   buffer_size) )
                                         {
