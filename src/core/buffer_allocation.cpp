@@ -595,19 +595,13 @@ static void calc_allocation_size(const int width,
                                  const alloc_type_t alloc_type,
                                  const format_info_t format,
                                  const bool has_cpu_usage,
-                                 bool has_hw_usage,
+                                 const bool has_hw_usage,
 				 const bool is_stride_specified,
                                  int * const pixel_stride,
                                  size_t * const size,
                                  plane_info_t plane_info[MAX_PLANES])
 {
 	plane_info[0].offset = 0;
-
-	if ( !has_hw_usage )
-	{
-		W("WORKAROUND: force 'has_hw_usage' to true.");
-		has_hw_usage = true;
-	}
 
 	*size = 0;
 	for (uint8_t plane = 0; plane < format.npln; plane++)
