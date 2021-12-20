@@ -28,6 +28,7 @@
 
 #include <log/log.h>
 #include <cutils/atomic.h>
+#include <cutils/properties.h>
 
 #include <BufferAllocator/BufferAllocator.h>
 
@@ -78,8 +79,23 @@ class BufferAllocator* s_buf_allocator;
  * ---------------------------------------------------------------------------------------------------------
  */
 
+static bool is_alloc_all_buffers_from_cma_heap_required_via_prop()
+{
+        char value[PROPERTY_VALUE_MAX];
+
+        property_get("vendor.gralloc.alloc_all_buf_from_cma_heap", value, "0");
+
+        return (0 == strcmp("1", value) );
+}
+
 static const char* pick_dmabuf_heap(uint64_t usage)
 {
+	if ( is_alloc_all_buffers_from_cma_heap_required_via_prop() )
+	{
+		MALI_GRALLOC_LOGI("to allocate all buffer from cma_heap");
+		return DMABUF_CMA;
+	}
+
 	if (usage & GRALLOC_USAGE_PROTECTED)
 	{
 		MALI_GRALLOC_LOGE("Protected dmabuf_heap memory is not supported yet.");
