@@ -71,19 +71,21 @@
 
 typedef enum
 {
-	/* 表征 client 要求 buffer 的 pixel_stride 是 16 对齐.
+	/* 表征 client 要求 buffer (的 plane_0) 的 byte_stride 是 16 对齐.
 	 * 仅 配合 HAL_PIXEL_FORMAT_YCrCb_NV12 等特定 rk_video_formats 使用.
+	 *
+	 * 对 HAL_PIXEL_FORMAT_YCrCb_NV12, plane_0 的 byte_stride 就是 pixel_stride.
 	 */
 	RK_GRALLOC_USAGE_STRIDE_ALIGN_16 = GRALLOC_USAGE_PRIVATE_10,
-	/* 表征 client 要求 buffer 的 pixel_stride 是 128 对齐.
+	/* 表征 client 要求 buffer (的 plane_0) 的 byte_stride 是 128 对齐.
 	 * 仅 配合 HAL_PIXEL_FORMAT_YCrCb_NV12 等特定 rk_video_formats 使用.
 	 */
 	RK_GRALLOC_USAGE_STRIDE_ALIGN_128 = GRALLOC_USAGE_PRIVATE_9,
-	/* 表征 client 要求 buffer 的 pixel_stride 是 256 的奇数倍.
+	/* 表征 client 要求 buffer (的 plane_0) 的 byte_stride 是 256 的奇数倍.
 	 * 仅 配合 HAL_PIXEL_FORMAT_YCrCb_NV12 等特定 rk_video_formats 使用.
 	 */
 	RK_GRALLOC_USAGE_STRIDE_ALIGN_256_ODD_TIMES = GRALLOC_USAGE_PRIVATE_8,
-	/* 表征 client 要求 buffer 的 pixel_stride 是 64 对齐.
+	/* 表征 client 要求 buffer (的 plane_0) 的 byte_stride 是 64 对齐.
 	 * 仅 配合 HAL_PIXEL_FORMAT_YCrCb_NV12 等特定 rk_video_formats 使用.
 	 */
 	RK_GRALLOC_USAGE_STRIDE_ALIGN_64 = GRALLOC_USAGE_PRIVATE_7,

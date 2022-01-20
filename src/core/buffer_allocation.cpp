@@ -138,6 +138,7 @@ static rect_t get_afbc_sb_size(alloc_type_t alloc_type, const uint8_t plane)
 static void adjust_rk_video_buffer_size(buffer_descriptor_t* const bufDescriptor, const format_info_t* format)
 {
 	const uint32_t pixel_stride = bufDescriptor->plane_info[0].byte_stride * 8 / (format->bpp[0]);
+	const uint32_t byte_stride = bufDescriptor->plane_info[0].byte_stride;
 	const uint32_t height = bufDescriptor->height;
 	const uint32_t base_format = bufDescriptor->alloc_format & MALI_GRALLOC_INTFMT_FMT_MASK;
 	size_t size_needed_by_rk_video = 0;
@@ -156,6 +157,11 @@ static void adjust_rk_video_buffer_size(buffer_descriptor_t* const bufDescriptor
 		case MALI_GRALLOC_FORMAT_INTERNAL_NV16:
 		{
 			size_needed_by_rk_video = 2.5 * pixel_stride * height; // 根据 陈锦森的 要求
+			break;
+		}
+		case MALI_GRALLOC_FORMAT_INTERNAL_NV15:
+		{
+			size_needed_by_rk_video = 2 * byte_stride * height;
 			break;
 		}
 		default:
@@ -715,7 +721,9 @@ static void calc_allocation_size(const int width,
 			{
 				plane_info[plane].byte_stride = GRALLOC_ALIGN(plane_info[plane].byte_stride * format.tile_size, stride_align) / format.tile_size;
 			}
-			if ( usage_flag_for_stride_alignment != 0 )
+
+			if ( usage_flag_for_stride_alignment != 0
+				&& format.id != MALI_GRALLOC_FORMAT_INTERNAL_NV15 ) // 预期处理 NV12
 			{
 				uint32_t pixel_stride = 0;
 
@@ -763,6 +771,39 @@ static void calc_allocation_size(const int width,
 				                   plane_info[0].byte_stride,
 				                   stride_align,
 				                   &plane_info[plane].byte_stride);
+			}
+
+			/* 对 NV15 (rk_nv12_10) 调整 byte_stride. */
+			if ( usage_flag_for_stride_alignment != 0
+				&& MALI_GRALLOC_FORMAT_INTERNAL_NV15 == format.id )
+			{
+				uint32_t byte_stride = plane_info[plane].byte_stride;
+
+				switch ( usage_flag_for_stride_alignment )
+				{
+				case RK_GRALLOC_USAGE_STRIDE_ALIGN_16:
+					byte_stride = GRALLOC_ALIGN(byte_stride, 16);
+					break;
+
+				case RK_GRALLOC_USAGE_STRIDE_ALIGN_64:
+					byte_stride = GRALLOC_ALIGN(byte_stride, 64);
+					break;
+
+				case RK_GRALLOC_USAGE_STRIDE_ALIGN_128:
+					byte_stride = GRALLOC_ALIGN(byte_stride, 128);
+					break;
+
+				case RK_GRALLOC_USAGE_STRIDE_ALIGN_256_ODD_TIMES:
+					byte_stride = ( (byte_stride + 255) & (~255) ) | (256);
+					break;
+
+				default:
+					E("unexpected 'usage_flag_for_stride_alignment': 0x%" PRIx64,
+					  usage_flag_for_stride_alignment);
+					break;
+				}
+
+				plane_info[plane].byte_stride = byte_stride;
 			}
 		}
 		MALI_GRALLOC_LOGV("Byte stride: %d", plane_info[plane].byte_stride);

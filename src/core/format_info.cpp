@@ -210,7 +210,7 @@ const format_info_t formats[] = {
 		.npln = 2, .ncmp = { 1, 2, 0 }, .bps = 10, .bpp_afbc = { 0, 0, 0 }, .bpp = { 10, 20, 0 },
 		.hsub = 2, .vsub = 2, .align_w = 2, .align_h = 2, ALIGN_W_CPU_DEFAULT,
 		.tile_size = 1, .has_alpha = false, .is_rgb = false, .is_yuv = true,
-		.afbc = false, .linear = false, .yuv_transform = false, .flex = false, .block_linear = true, .afrc = false,
+		.afbc = false, .linear = true, .yuv_transform = false, .flex = false, .block_linear = true, .afrc = false,
 	},
 	/* 422 (10-bit) */
 	{
