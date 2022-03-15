@@ -699,8 +699,15 @@ static void calc_allocation_size(const int width,
 			uint32_t cpu_align = 0;
 			if (has_cpu_usage)
 			{
+				if ( MALI_GRALLOC_FORMAT_INTERNAL_BGR_888 != format.id )
+				{
 				assert((format.bpp[plane] * format.align_w_cpu) % 8 == 0);
 				cpu_align = (format.bpp[plane] * format.align_w_cpu) / 8;
+				}
+				else
+				{
+					MALI_GRALLOC_LOGW("for BGR_888, force 'cpu_align' to 0");
+				}
 			}
 
 			uint32_t stride_align = lcm(hw_align, cpu_align);
