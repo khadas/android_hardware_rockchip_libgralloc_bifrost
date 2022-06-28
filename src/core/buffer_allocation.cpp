@@ -688,7 +688,9 @@ static void calc_allocation_size(const int width,
 #if 0
 				hw_align = format.is_yuv ? 128 : 64;
 #else
-				if ( is_base_format_used_by_rk_video(format.id) && is_stride_specified )
+				if ( is_base_format_used_by_rk_video(format.id) 
+					&& ( is_stride_specified
+						|| usage_flag_for_stride_alignment != 0 ) )
 				{
 					// 此时, 认为 client(rk_video_decoder 等) 通过 width 传入的 pixel_stride 是合理的,
 					// 可满足 GPU 等其他组件对 stride 的要求.
@@ -723,7 +725,7 @@ static void calc_allocation_size(const int width,
 			}
 
 			if ( usage_flag_for_stride_alignment != 0
-				&& format.id != MALI_GRALLOC_FORMAT_INTERNAL_NV15 ) // 预期处理 NV12
+				&& format.id == MALI_GRALLOC_FORMAT_INTERNAL_NV12 ) // 仅处理 NV12
 			{
 				uint32_t pixel_stride = 0;
 
@@ -773,9 +775,10 @@ static void calc_allocation_size(const int width,
 				                   &plane_info[plane].byte_stride);
 			}
 
-			/* 对 NV15 (rk_nv12_10) 调整 byte_stride. */
+			/* 按需对 nv12 以外的 rk_video 使用的格式调整 byte_stride. */
 			if ( usage_flag_for_stride_alignment != 0
-				&& MALI_GRALLOC_FORMAT_INTERNAL_NV15 == format.id )
+				&& is_base_format_used_by_rk_video(format.id)
+				&& MALI_GRALLOC_FORMAT_INTERNAL_NV12 != format.id )
 			{
 				uint32_t byte_stride = plane_info[plane].byte_stride;
 
