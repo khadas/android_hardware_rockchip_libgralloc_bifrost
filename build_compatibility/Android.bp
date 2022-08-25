@@ -17,7 +17,7 @@
 
 cc_defaults {
     name: "arm_gralloc_uses_aidl_defaults",
-    shared_libs: ["arm.graphics-V3-ndk_platform"],
+    shared_libs: ["arm.graphics-V3-ndk"],
 }
 
 cc_defaults {
