@@ -550,6 +550,32 @@ Error set_metadata(const private_handle_t *handle, const IMapper::MetadataType &
 		{
 			Dataspace dataspace;
 			err = android::gralloc4::decodeDataspace(metadata, &dataspace);
+			// The new dataspace format is above 16 bits,
+			if (((int32_t)dataspace) & 0xffff) {
+				MALI_GRALLOC_LOGW("Found legacy dataspace=0x%x, converting it to v0...", dataspace);
+				switch (((int32_t)dataspace) & 0xffff) {
+					case HAL_DATASPACE_SRGB:
+						dataspace = Dataspace::SRGB;
+						break;
+					case HAL_DATASPACE_JFIF:
+						dataspace = Dataspace::JFIF;
+						break;
+					case HAL_DATASPACE_SRGB_LINEAR:
+						dataspace = Dataspace::SRGB_LINEAR;
+						break;
+					case HAL_DATASPACE_BT601_625:
+						dataspace = Dataspace::BT601_625;
+						break;
+					case HAL_DATASPACE_BT601_525:
+						dataspace = Dataspace::BT601_525;
+						break;
+					case HAL_DATASPACE_BT709:
+						dataspace = Dataspace::BT709;
+						break;
+					default:
+						MALI_GRALLOC_LOGW("Unsupported legacy dataspace=0x%x", dataspace);
+				}
+			}
 			if (!err && dataspace!= Dataspace::UNKNOWN)
 			{
 				set_dataspace(handle, dataspace);
