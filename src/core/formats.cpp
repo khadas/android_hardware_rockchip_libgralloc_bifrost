@@ -1330,6 +1330,11 @@ static rk_board_platform_t get_rk_board_platform()
 		{
 			s_platform = RK3326;
 		}
+		else if (0 == strcmp("rk3562", value) )
+		{
+			/* the same to RK356X */
+			s_platform = RK356X;
+		}
 		else if (0 == strcmp("rk356x", value) )
 		{
 			s_platform = RK356X;
