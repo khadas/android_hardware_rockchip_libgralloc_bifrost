@@ -100,6 +100,15 @@ static bool is_alloc_all_buffers_from_cma_heap_required_via_prop()
         return (0 == strcmp("1", value) );
 }
 
+static bool is_alloc_all_buffers_within_4g_required_via_prop()
+{
+        char value[PROPERTY_VALUE_MAX];
+
+        property_get("vendor.gralloc.alloc_all_buf_within_4g", value, "0");
+
+        return (0 == strcmp("1", value) );
+}
+
 static const char *get_dma_buf_heap_name(dma_buf_heap heap)
 {
 	switch (heap)
@@ -149,6 +158,12 @@ static dma_buf_heap pick_dma_buf_heap(uint64_t usage)
 	{
 		MALI_GRALLOC_LOGE("Protected dmabuf_heap memory is not supported yet.");
 		return dma_buf_heap::system_uncached;
+	}
+
+	if ( is_alloc_all_buffers_within_4g_required_via_prop() )
+	{
+		MALI_GRALLOC_LOGI("to allocate all buffers within 4G");
+		usage |= RK_GRALLOC_USAGE_WITHIN_4G;
 	}
 
 	if ( usage & RK_GRALLOC_USAGE_PHY_CONTIG_BUFFER )
