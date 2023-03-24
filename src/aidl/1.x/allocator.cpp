@@ -18,7 +18,6 @@
 #include "allocator.h"
 #include "idl_common/descriptor.h"
 #include "idl_common/allocator.h"
-#include "core/buffer_allocation.h"
 
 #include <aidlcommonsupport/NativeHandle.h>
 #include <aidl/android/hardware/graphics/allocator/AllocationError.h>
