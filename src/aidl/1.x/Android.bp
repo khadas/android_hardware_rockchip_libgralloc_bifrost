@@ -40,7 +40,38 @@ cc_library_shared {
         "android.hardware.graphics.allocator-V1-ndk",
         "android.hardware.graphics.mapper@4.0",
         "libbinder_ndk",
-		"libdmabufheap",
+	"libdmabufheap",
+    ],
+    static_libs: [
+        "libaidlcommonsupport",
+        "libgralloc_allocator_idl",
+    ],
+    export_include_dirs: [
+        ".",
+    ],
+    export_shared_lib_headers: [
+        "android.hardware.graphics.allocator-V1-ndk",
+    ],
+    srcs: [
+        "arm_allocator.cpp",
+    ],
+}
+
+cc_library_shared {
+    name: "android.hardware.graphics.allocator-V1-arm",
+    compile_multilib: "both",
+    relative_install_path: "hw/",
+    defaults: [
+        "arm_gralloc_defaults",
+        "libgralloc_allocator_idl_deps",
+    ],
+    shared_libs: [
+        "android.hardware.graphics.allocator-V1-ndk",
+        "android.hardware.graphics.mapper@4.0",
+        "libbinder_ndk",
+        "libdmabufheap",
+        "libvndksupport",
+        // "android.hardware.graphics.allocator-V1-bifrost",
     ],
     static_libs: [
         "libaidlcommonsupport",
