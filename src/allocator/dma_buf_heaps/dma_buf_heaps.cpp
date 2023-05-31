@@ -125,6 +125,9 @@ static const char *get_dma_buf_heap_name(dma_buf_heap heap)
 		return kDmabufSystemDma32HeapName;
 	case dma_buf_heap::system_uncached_dma32:
 		return kDmabufSystemUncachedDma32HeapName;
+	default:
+		MALI_GRALLOC_LOGE("Invalid 'heap': %d", heap);
+		return NULL;
 	}
 }
 

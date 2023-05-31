@@ -60,6 +60,8 @@ struct aligned_optional
 			return std::nullopt;
 		case state::occupied:
 			return std::make_optional(item);
+		default:
+			return std::nullopt;
 		}
 	}
 
